@@ -7,18 +7,18 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Initialize npm workspaces for `apps/*` and `packages/*`
-- [ ] Create `apps/web`, `apps/api`, and `apps/worker`
-- [ ] Create `packages/database` and `packages/shared`
-- [ ] Add shared TypeScript configuration
-- [ ] Add `.gitignore` and `.env.example`
-- [ ] Add root scripts for development, type-checking, and tests
+- [x] Initialize npm workspaces for `apps/*` and `packages/*`
+- [x] Create `apps/web`, `apps/api`, and `apps/worker`
+- [x] Create `packages/database` and `packages/shared`
+- [x] Add shared TypeScript configuration
+- [x] Add `.gitignore` and `.env.example`
+- [x] Add root scripts for development, type-checking, and tests
 
 ### Done when
 
-- [ ] `npm install` succeeds from the repository root
-- [ ] All workspaces can import shared types
-- [ ] Required configuration is documented in `.env.example`
+- [x] `npm install` succeeds from the repository root
+- [x] All workspaces can import shared types
+- [x] Required configuration is documented in `.env.example`
 
 ## Phase 1: Local Infrastructure
 

@@ -15,8 +15,9 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-This repository currently contains the project design and implementation
-checklist. The application has not been implemented yet.
+Phase 0 is complete: the npm workspaces, shared TypeScript configuration, and
+development tooling are in place. Application features have not been implemented
+yet.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)
