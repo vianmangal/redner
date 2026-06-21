@@ -15,6 +15,16 @@ function validationDetails(error: ZodError) {
   }));
 }
 
+function parseProjectId(value: string): string {
+  const parsed = projectIdSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new ApiError(400, "INVALID_PROJECT_ID", "Project ID is required");
+  }
+
+  return parsed.data;
+}
+
 export async function registerProjectRoutes(
   app: FastifyInstance,
   projects: ProjectStore,
@@ -49,7 +59,7 @@ export async function registerProjectRoutes(
   });
 
   app.get<{ Params: { id: string } }>("/projects/:id", async (request) => {
-    const id = projectIdSchema.parse(request.params.id);
+    const id = parseProjectId(request.params.id);
     const project = await projects.findById(id);
 
     if (project === null) {
@@ -62,7 +72,7 @@ export async function registerProjectRoutes(
   app.delete<{ Params: { id: string } }>(
     "/projects/:id",
     async (request, reply) => {
-      const id = projectIdSchema.parse(request.params.id);
+      const id = parseProjectId(request.params.id);
       const result = await projects.deleteIfInactive(id);
 
       if (result === "not_found") {

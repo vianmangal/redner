@@ -189,3 +189,21 @@ test("duplicate project slugs return a conflict", async (context) => {
   assert.equal(response.statusCode, 409);
   assert.equal(response.json().error.code, "PROJECT_SLUG_CONFLICT");
 });
+
+test("malformed project IDs return a client error", async (context) => {
+  const app = buildApp({ dependencies: dependencies(), logger: false });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/projects/%20",
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.json(), {
+    error: {
+      code: "INVALID_PROJECT_ID",
+      message: "Project ID is required",
+    },
+  });
+});
