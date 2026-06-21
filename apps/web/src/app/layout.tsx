@@ -26,8 +26,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </div>
         <div className="silk-wash" aria-hidden="true" />
         <div className="relative z-10 min-h-screen">
-          <header className="sticky top-0 z-30 border-b border-white/65 bg-white/55 shadow-[0_8px_30px_rgb(42_67_135/0.06)] backdrop-blur-2xl">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <header className="relative z-30">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
               <Link
                 href="/"
                 className="text-lg font-bold tracking-[-0.045em] text-ink transition hover:text-accent"
@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </Link>
             </div>
           </header>
-          <main className="mx-auto w-full max-w-6xl px-6 py-12 sm:py-16">
+          <main className="mx-auto w-full max-w-6xl px-6 py-8 sm:py-10">
             {children}
           </main>
         </div>
