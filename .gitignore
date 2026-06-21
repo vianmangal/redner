@@ -7,6 +7,7 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+packages/database/src/generated/
 
 # Local environment files
 .env
@@ -17,6 +18,10 @@ coverage/
 *.log
 tmp/
 .cache/
+
+# Generated Caddy routes (keep the directory itself)
+data/caddy/routes/*
+!data/caddy/routes/.gitkeep
 
 # Editor and operating system files
 .DS_Store

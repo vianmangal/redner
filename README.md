@@ -15,9 +15,9 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-Phase 0 is complete: the npm workspaces, shared TypeScript configuration, and
-development tooling are in place. Application features have not been implemented
-yet.
+Phases 0 through 3 are complete: the npm workspace foundation, local
+infrastructure, Prisma data model, project API, and Next.js dashboard are in
+place. Deployment features have not been implemented yet.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)
@@ -32,7 +32,7 @@ The learning MVP will support this flow:
 4. Clone the repository and build its `Dockerfile`.
 5. Watch stored and live build logs.
 6. Start the new container and verify that it is healthy.
-7. Route a local subdomain to it through Traefik.
+7. Route a local subdomain to it through Caddy.
 8. Stop, restart, or redeploy the application.
 
 The first target is one developer machine. Deploying redner to one private VPS
@@ -48,8 +48,48 @@ Browser
                                              | Redis Pub/Sub
 Fastify API --> BullMQ/Redis --> Deployment worker --> Git and Docker
                                                          |
-Internet or local browser --> Traefik ----------------> App containers
+Internet or local browser --> Caddy ------------------> App containers
 ```
+
+## Local Infrastructure
+
+Docker Desktop or another Docker Engine with Compose is required. The checked-in
+defaults are suitable for local learning; copy `.env.example` to `.env` only when
+you need to override them.
+
+```bash
+docker compose up -d --wait
+docker compose ps
+curl http://localhost/healthz
+```
+
+The health endpoint should return `ok`. Stop the services without deleting their
+persistent PostgreSQL and Caddy volumes:
+
+```bash
+docker compose down
+```
+
+Apply tracked database migrations and start the API:
+
+```bash
+npm run db:deploy
+npm run dev:api
+curl http://127.0.0.1:4000/health
+```
+
+The API reports `200` when PostgreSQL and Redis are available and `503` when
+either dependency is down.
+
+Start the API and dashboard together:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000` to create and manage project configurations. Local
+application hostnames continue to use `.localhost`; a personal base domain is
+configured only during the optional single-VPS phase.
 
 ## Technology
 
@@ -60,7 +100,7 @@ Internet or local browser --> Traefik ----------------> App containers
 | Database | PostgreSQL and Prisma | Persist projects, deployments, and logs |
 | Queue | Redis and BullMQ | Move slow deployments out of API requests |
 | Runtime | Docker | Build images and run isolated application processes |
-| Routing | Traefik | Route subdomains to the correct containers |
+| Routing | Caddy | Route subdomains with simple, reloadable configuration |
 | Live logs | Server-Sent Events | Stream one-way log updates to the browser |
 
 ## Learning Goals
@@ -70,7 +110,7 @@ Internet or local browser --> Traefik ----------------> App containers
 - Safely execute Git and Docker commands from a worker.
 - Persist deployment state and recover it after process restarts.
 - Stream live logs without losing stored history.
-- Route multiple applications through one reverse proxy.
+- Generate reverse-proxy routes and reload them without downtime.
 - Learn the basic DNS and TLS setup used by deployment platforms.
 
 ## Deliberate Limits

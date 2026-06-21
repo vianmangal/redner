@@ -1,0 +1,77 @@
+name: redner
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: redner-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-redner}
+      POSTGRES_USER: ${POSTGRES_USER:-redner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redner}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    container_name: redner-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: redner-caddy
+    ports:
+      - "127.0.0.1:${CADDY_HTTP_PORT:-80}:80"
+      - "127.0.0.1:${CADDY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy/routes:/etc/caddy/routes:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - proxy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1/healthz",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  proxy:
+    name: redner_proxy

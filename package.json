@@ -9,12 +9,19 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "npm run db:generate",
     "dev": "concurrently -n web,api,worker -c cyan,green,yellow \"npm run dev --workspace @redner/web\" \"npm run dev --workspace @redner/api\" \"npm run dev --workspace @redner/worker\"",
     "dev:web": "npm run dev --workspace @redner/web",
     "dev:api": "npm run dev --workspace @redner/api",
     "dev:worker": "npm run dev --workspace @redner/worker",
+    "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "tsx --test tests/unit/**/*.test.ts",
+    "test:integration": "tsx --test tests/integration/**/*.test.ts",
+    "db:generate": "npm run prisma:generate --workspace @redner/database",
+    "db:migrate": "npm run prisma:migrate --workspace @redner/database --",
+    "db:deploy": "npm run prisma:deploy --workspace @redner/database",
+    "db:status": "npm run prisma:status --workspace @redner/database"
   },
   "engines": {
     "node": ">=22.0.0",

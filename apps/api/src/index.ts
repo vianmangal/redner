@@ -5,6 +5,17 @@ export const workspace: WorkspaceInfo = {
   kind: "application",
 };
 
-if (process.env.NODE_ENV !== "test") {
-  console.log("redner API workspace is ready");
-}
+export { buildApp } from "./app.js";
+export { loadConfig } from "./config.js";
+export { createDependencies } from "./dependencies.js";
+export { ApiError } from "./errors.js";
+export {
+  DuplicateProjectSlugError,
+  type DeleteProjectResult,
+  type ProjectStore,
+} from "./projects/store.js";
+export type {
+  AppDependencies,
+  DependencyCheck,
+  DependencyName,
+} from "./dependencies.js";

@@ -1,0 +1,12 @@
+{
+	admin localhost:2019
+	auto_https off
+}
+
+:80 {
+	@health path /healthz
+	respond @health "ok" 200
+	respond "redner route not found" 404
+}
+
+import routes/*.caddy

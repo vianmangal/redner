@@ -24,55 +24,56 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Add PostgreSQL, Redis, and Traefik to `docker-compose.yml`
-- [ ] Add persistent development volumes for PostgreSQL and Traefik certificates
-- [ ] Create the shared `redner_proxy` Docker network
-- [ ] Configure Traefik's Docker provider and local HTTP entrypoint
-- [ ] Keep the Traefik dashboard private or disabled
-- [ ] Add service health checks to Docker Compose
+- [x] Add PostgreSQL, Redis, and Caddy to `docker-compose.yml`
+- [x] Add persistent state for PostgreSQL and Caddy
+- [x] Create the shared `redner_proxy` Docker network
+- [x] Add a base `Caddyfile` that imports `routes/*.caddy`
+- [x] Mount the generated routes directory into the Caddy container
+- [x] Keep Caddy's admin endpoint internal and do not mount the Docker socket
+- [x] Add service health checks to Docker Compose
 
 ### Done when
 
-- [ ] `docker compose up -d` starts all three services
-- [ ] PostgreSQL and Redis health checks pass
-- [ ] Traefik can observe labeled containers on `redner_proxy`
+- [x] `docker compose up -d` starts all three services
+- [x] PostgreSQL and Redis health checks pass
+- [x] Caddy accepts an empty imported routes directory and serves its health check
 
 ## Phase 2: Database and API
 
 ### Build
 
-- [ ] Add Prisma models for Project, Deployment, and Log
-- [ ] Add separate project and deployment status enums
-- [ ] Add `activeDeploymentId` and the deployment configuration snapshot
-- [ ] Add unique deployment log sequence numbers
-- [ ] Create and run the initial migration
-- [ ] Initialize Fastify with configuration validation and a shared error format
-- [ ] Add `GET /health` with database and Redis checks
-- [ ] Add request logging without sensitive values
+- [x] Add Prisma models for Project, Deployment, and Log
+- [x] Add separate project and deployment status enums
+- [x] Add `activeDeploymentId` and the deployment configuration snapshot
+- [x] Add unique deployment log sequence numbers
+- [x] Create and run the initial migration
+- [x] Initialize Fastify with configuration validation and a shared error format
+- [x] Add `GET /health` with database and Redis checks
+- [x] Add request logging without sensitive values
 
 ### Done when
 
-- [ ] The migration succeeds on an empty database
-- [ ] Prisma can create and read all three models
-- [ ] `GET /health` reports dependency status accurately
+- [x] The migration succeeds on an empty database
+- [x] Prisma can create and read all three models
+- [x] `GET /health` reports dependency status accurately
 
 ## Phase 3: Project CRUD and Dashboard
 
 ### Build
 
-- [ ] Implement `POST /projects`
-- [ ] Implement `GET /projects` and `GET /projects/:id`
-- [ ] Implement `DELETE /projects/:id` for projects without active work
-- [ ] Validate names, DNS-safe unique slugs, GitHub HTTPS URLs, branches, and ports
-- [ ] Initialize the Next.js and Tailwind dashboard
-- [ ] Add projects, new project, and project detail pages
-- [ ] Add loading, empty, validation, and API error states
+- [x] Implement `POST /projects`
+- [x] Implement `GET /projects` and `GET /projects/:id`
+- [x] Implement `DELETE /projects/:id` for projects without active work
+- [x] Validate names, DNS-safe unique slugs, GitHub HTTPS URLs, branches, and ports
+- [x] Initialize the Next.js and Tailwind dashboard
+- [x] Add projects, new project, and project detail pages
+- [x] Add loading, empty, validation, and API error states
 
 ### Done when
 
-- [ ] A valid project can be created and viewed from the browser
-- [ ] Invalid or duplicate input returns a useful error
-- [ ] A project can be deleted without leaving database records
+- [x] A valid project can be created and viewed from the browser
+- [x] Invalid or duplicate input returns a useful error
+- [x] A project can be deleted without leaving database records
 
 ## Phase 4: Queue and Worker
 
@@ -120,13 +121,14 @@ verification before moving to the next one.
 ### Build
 
 - [ ] Start a uniquely named candidate container from the built image
-- [ ] Add ownership, project, deployment, and Traefik Docker labels
+- [ ] Add ownership, project, and deployment Docker labels
 - [ ] Attach the candidate to `redner_proxy`
 - [ ] Apply CPU, memory, and PID limits plus `no-new-privileges`
 - [ ] Do not mount the Docker socket or sensitive host paths
 - [ ] Add a bounded HTTP health check for the configured app port
-- [ ] Configure the Traefik service health check
-- [ ] Promote the healthy candidate through `activeDeploymentId`
+- [ ] Generate a Caddy route fragment for the healthy candidate
+- [ ] Validate and gracefully reload Caddy before promotion
+- [ ] Promote the routed candidate through `activeDeploymentId`
 - [ ] Stop and remove the previous container only after promotion
 - [ ] Keep the previous version active when startup fails
 - [ ] Implement project stop and restart actions
@@ -162,9 +164,11 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Generate Traefik router and service labels from the validated project slug
+- [ ] Generate one Caddy route fragment from the validated project slug
 - [ ] Route `project-slug.localhost` to the configured container port
-- [ ] Publish HTTP only through Traefik
+- [ ] Write route fragments atomically, then validate the complete Caddyfile
+- [ ] Gracefully reload Caddy and preserve the old route if reload fails
+- [ ] Publish HTTP only through Caddy
 - [ ] Display the application URL on project pages
 - [ ] Document an `/etc/hosts` fallback for unsupported environments
 
@@ -201,8 +205,8 @@ Do this only after the local MVP is complete.
 
 - [ ] Provision a disposable or private single VPS
 - [ ] Point `*.apps.example.com` at the VPS
-- [ ] Configure Traefik on ports 80 and 443
-- [ ] Add per-subdomain Let's Encrypt certificates using the HTTP challenge
+- [ ] Configure Caddy on ports 80 and 443
+- [ ] Enable Caddy automatic HTTPS for public application hostnames
 - [ ] Generate application URLs under the selected base domain
 - [ ] Protect the redner dashboard with a VPN or server-level authentication
 - [ ] Confirm that only deployed application routes are public

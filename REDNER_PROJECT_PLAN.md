@@ -5,7 +5,7 @@
 `redner` is a minimal, single-user deployment dashboard for learning how a
 platform-as-a-service works. It accepts a trusted public GitHub repository with a
 `Dockerfile`, builds it in a background worker, starts it with Docker, shows its
-logs, and routes a subdomain to it through Traefik.
+logs, and routes a subdomain to it through Caddy.
 
 The project is intentionally limited to one host and one operator. It is not a
 multi-tenant hosting service.
@@ -42,7 +42,7 @@ an optional final exercise, not part of the local MVP.
 - Persisted build and runtime logs
 - Live log streaming with Server-Sent Events (SSE)
 - Basic HTTP health checks
-- Local Traefik subdomain routing
+- Local Caddy subdomain routing
 - Stop, restart, redeploy, and delete actions
 - Deployment timeouts, resource limits, and cleanup
 
@@ -66,7 +66,7 @@ an optional final exercise, not part of the local MVP.
 | Queue | Redis, BullMQ | Deployment jobs and worker coordination |
 | Worker | Node.js, TypeScript | Git, Docker build, lifecycle, and cleanup |
 | Runtime | Docker | Application images and containers |
-| Proxy | Traefik | Local subdomain routing |
+| Proxy | Caddy | Generated routes and automatic HTTPS |
 
 Use npm workspaces so the web, API, worker, database package, and shared types can
 live in one repository without requiring an additional monorepo tool.
@@ -98,12 +98,12 @@ Browser ---------------->| Next.js web UI |
                                    App containers
                                         ^
                                         |
-Browser or internet -------------> Traefik
+Browser or internet -------------> Caddy
 ```
 
 The API writes durable records to PostgreSQL and independently enqueues work in
 BullMQ. The worker publishes live log events through Redis; the API forwards
-them to connected SSE clients. Traefik handles application traffic only and must
+them to connected SSE clients. Caddy handles application traffic only and must
 not expose the redner dashboard publicly.
 
 ## 6. Repository Structure
@@ -117,7 +117,8 @@ redner/
 |-- packages/
 |   |-- database/            # Prisma schema and client
 |   `-- shared/              # Shared schemas, types, and constants
-|-- docker-compose.yml       # PostgreSQL, Redis, and Traefik
+|-- Caddyfile                # Base proxy configuration and route imports
+|-- docker-compose.yml       # PostgreSQL, Redis, and Caddy
 |-- .env.example
 |-- package.json
 `-- README.md
@@ -266,15 +267,20 @@ For each BullMQ job, the worker performs these steps:
 6. Start a uniquely named candidate container with resource and process limits.
 7. Connect the candidate to the proxy network and mark the deployment `starting`.
 8. Wait for a bounded HTTP health check against the configured app port.
-9. If healthy, make it the active deployment and stop/remove the old container.
-10. Mark the deployment `succeeded`, begin collecting runtime logs, and clean the
+9. If healthy, atomically write its Caddy route fragment, validate the complete
+   Caddyfile, and gracefully reload Caddy.
+10. After the route reload succeeds, make it active and stop/remove the old container.
+11. Mark the deployment `succeeded`, begin collecting runtime logs, and clean the
     temporary directory.
-11. If any step fails, keep the old active container, mark the new deployment
+12. If any step fails, keep the old active container, mark the new deployment
     `failed`, remove its candidate resources, and store a readable reason.
 
-Traefik should use a shared service name per project so a healthy replacement can
-join before the old container leaves. Configure a Traefik HTTP health check so a
-starting candidate does not receive normal traffic prematurely.
+Caddy uses one generated route fragment per project. The fragment points the
+stable project hostname at the active container name and port. A new fragment is
+written through a temporary file and renamed only after it is complete. Validate
+the assembled Caddyfile before reloading; if validation or reload fails, preserve
+the previous fragment and keep routing to the old container. Caddy reloads its
+configuration gracefully, so successful route changes do not restart the proxy.
 
 Jobs must be idempotent: retrying a job must reuse its deployment record, remove
 stale candidate resources with the same deployment ID, and never create two
@@ -317,8 +323,9 @@ At worker startup, run a reconciliation pass:
 - Remove orphan candidate containers and expired temporary directories.
 - Never delete the image or container referenced by an active deployment.
 
-Use Docker labels for project ID, deployment ID, ownership, and Traefik routing.
-Do not rely on parsing container names as the source of truth.
+Use Docker labels for project ID, deployment ID, and redner ownership. Routing
+belongs in generated Caddy fragments rather than Docker labels. Do not rely on
+parsing container names as the source of truth.
 
 `stop` stops the active container and marks the project `stopped`. `restart`
 starts the same successful image again and health-checks it. `deploy` builds the
@@ -354,18 +361,36 @@ images only after confirmation.
 
 ## 13. Local Routing
 
-Traefik and application containers share a Docker network named `redner_proxy`.
-Each application uses its project slug as a local host rule:
+Caddy and application containers share a Docker network named `redner_proxy`.
+The base `Caddyfile` imports generated files from `routes/*.caddy`. Each project
+fragment uses its slug as a local host rule:
 
 ```text
 todo-api.localhost
 blog.localhost
 ```
 
+Example generated fragment:
+
+```caddyfile
+http://todo-api.localhost {
+  reverse_proxy redner-todo-api-deployment-id:3000 {
+    health_uri /
+  }
+}
+```
+
 Modern browsers resolve `*.localhost` to the loopback interface. Document an
-`/etc/hosts` fallback for environments that do not. Traefik is the only process
+`/etc/hosts` fallback for environments that do not. The explicit `http://` prefix
+keeps local development on HTTP and avoids installing a local certificate
+authority. Caddy is the only process
 that publishes the HTTP port; individual application containers do not publish
 random host ports in the final local flow.
+
+The worker writes route fragments to a directory mounted into the Caddy
+container, then runs `caddy validate` and `caddy reload` inside that container.
+Caddy does not receive the Docker socket, and its admin endpoint remains bound
+inside the container.
 
 ## 14. Optional Single-VPS Exercise
 
@@ -373,13 +398,15 @@ After the local MVP works:
 
 1. Place redner on a disposable or private VPS.
 2. Point a wildcard DNS record such as `*.apps.example.com` at the VPS.
-3. Open ports 80 and 443 for Traefik.
-4. Configure per-subdomain Let's Encrypt certificates with the HTTP challenge.
+3. Open ports 80 and 443 for Caddy.
+4. Remove the local `http://` prefix from public route hostnames so Caddy enables
+   automatic HTTPS and obtains per-subdomain certificates.
 5. Protect the redner dashboard with a VPN or server-level authentication.
 6. Keep only deployed application routes publicly reachable.
 
 Wildcard certificates require a DNS challenge and provider credentials, so they
-are deliberately outside this exercise.
+are deliberately outside this exercise. Per-subdomain certificates use Caddy's
+standard automatic HTTPS flow.
 
 ## 15. First Test Application
 

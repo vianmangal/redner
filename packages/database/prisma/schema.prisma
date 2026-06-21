@@ -1,0 +1,91 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  idle
+  running
+  unhealthy
+  stopped
+}
+
+enum DeploymentStatus {
+  queued
+  cloning
+  building
+  starting
+  succeeded
+  failed
+}
+
+enum DeploymentTrigger {
+  manual
+  restart
+}
+
+enum LogType {
+  system
+  build
+  runtime
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+  name               String
+  slug               String        @unique
+  repoUrl            String
+  branch             String
+  appPort            Int
+  status             ProjectStatus @default(idle)
+  activeDeploymentId String?       @unique
+  activeDeployment   Deployment?   @relation("ActiveDeployment", fields: [activeDeploymentId], references: [id], onDelete: SetNull)
+  deployments        Deployment[]  @relation("ProjectDeployments")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model Deployment {
+  id              String             @id @default(cuid())
+  projectId       String
+  project         Project            @relation("ProjectDeployments", fields: [projectId], references: [id], onDelete: Cascade)
+  activeFor       Project?           @relation("ActiveDeployment")
+  status          DeploymentStatus   @default(queued)
+  trigger         DeploymentTrigger  @default(manual)
+  snapshotRepoUrl String
+  snapshotBranch  String
+  snapshotSlug    String
+  snapshotAppPort Int
+  commitHash      String?
+  imageName       String?
+  containerId     String?
+  failureReason   String?            @db.Text
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  logs            Log[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([projectId, createdAt])
+  @@index([status])
+}
+
+model Log {
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  sequence     Int
+  type         LogType
+  message      String     @db.Text
+  createdAt    DateTime   @default(now())
+
+  @@unique([deploymentId, sequence])
+  @@index([deploymentId, createdAt])
+}
