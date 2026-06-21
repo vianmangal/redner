@@ -16,6 +16,13 @@ export interface DeploymentWorkItem {
 export interface WorkerDeploymentStore {
   load(deploymentId: string): Promise<DeploymentWorkItem | null>;
   appendSystemLog(deploymentId: string, message: string): Promise<void>;
+  appendBuildLog(deploymentId: string, message: string): Promise<void>;
+  markCloning(deploymentId: string): Promise<void>;
+  markBuilding(
+    deploymentId: string,
+    commitHash: string,
+    imageName: string,
+  ): Promise<void>;
   fail(deploymentId: string, reason: string): Promise<void>;
 }
 
@@ -30,6 +37,41 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
   }
 
   async appendSystemLog(deploymentId: string, message: string): Promise<void> {
+    await this.appendLog(deploymentId, "system", message);
+  }
+
+  async appendBuildLog(deploymentId: string, message: string): Promise<void> {
+    await this.appendLog(deploymentId, "build", message);
+  }
+
+  async markCloning(deploymentId: string): Promise<void> {
+    await this.database.deployment.update({
+      where: { id: deploymentId },
+      data: {
+        status: "cloning",
+        startedAt: new Date(),
+        finishedAt: null,
+        failureReason: null,
+      },
+    });
+  }
+
+  async markBuilding(
+    deploymentId: string,
+    commitHash: string,
+    imageName: string,
+  ): Promise<void> {
+    await this.database.deployment.update({
+      where: { id: deploymentId },
+      data: { status: "building", commitHash, imageName },
+    });
+  }
+
+  private async appendLog(
+    deploymentId: string,
+    type: "system" | "build",
+    message: string,
+  ): Promise<void> {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
         await this.database.$transaction(async (transaction) => {
@@ -42,7 +84,7 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
             data: {
               deploymentId,
               sequence: (latest?.sequence ?? 0) + 1,
-              type: "system",
+              type,
               message,
             },
           });

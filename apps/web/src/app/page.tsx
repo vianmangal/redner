@@ -40,7 +40,7 @@ export default async function ProjectsPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
             Configure trusted GitHub repositories and queue deployment jobs.
-            Repository cloning and image builds arrive in Phase 5.
+            Container startup and health checks arrive in Phase 6.
           </p>
         </div>
         <Link

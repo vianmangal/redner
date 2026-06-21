@@ -5,6 +5,12 @@ export const workspace: WorkspaceInfo = {
   kind: "application",
 };
 
+export {
+  CloneBuildExecutor,
+  type CloneBuildConfig,
+  type DeploymentExecutor,
+} from "./clone-build.js";
+
 export { loadWorkerConfig } from "./config.js";
 export {
   PrismaWorkerDeploymentStore,
@@ -12,6 +18,14 @@ export {
   type WorkerDeploymentStore,
 } from "./deployment-store.js";
 export { createDeploymentProcessor } from "./processor.js";
+export {
+  ProcessExecutionError,
+  runProcess,
+  type ProcessOutputLine,
+  type ProcessResult,
+  type ProcessRunner,
+  type RunProcessOptions,
+} from "./process-runner.js";
 export {
   RedisProjectLockManager,
   type AcquiredProjectLock,

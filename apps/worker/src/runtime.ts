@@ -9,6 +9,7 @@ import {
 } from "@redner/queue";
 
 import type { WorkerConfig } from "./config.js";
+import { CloneBuildExecutor } from "./clone-build.js";
 import { PrismaWorkerDeploymentStore } from "./deployment-store.js";
 import { createDeploymentProcessor } from "./processor.js";
 import { RedisProjectLockManager } from "./project-lock.js";
@@ -21,13 +22,20 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   const database = createDatabaseClient(config.DATABASE_URL);
   const lockConnection = createRedisConnection(config.REDIS_URL, "worker");
   const deployments = new PrismaWorkerDeploymentStore(database);
+  const executor = new CloneBuildExecutor(deployments, {
+    buildRoot: config.REDNER_BUILD_ROOT,
+    cloneTimeoutMs: config.CLONE_TIMEOUT_MS,
+    buildTimeoutMs: config.BUILD_TIMEOUT_MS,
+    maxLogLines: config.MAX_BUILD_LOG_LINES,
+    maxLogLineLength: config.MAX_LOG_LINE_LENGTH,
+  });
   const locks = new RedisProjectLockManager(
     lockConnection,
     config.DEPLOYMENT_LOCK_TTL_MS,
   );
   const worker = new Worker<DeploymentJobData>(
     DEPLOYMENT_QUEUE_NAME,
-    createDeploymentProcessor(deployments, locks),
+    createDeploymentProcessor(deployments, locks, executor),
     {
       connection: createBullConnectionOptions(config.REDIS_URL, "worker"),
       concurrency: config.WORKER_CONCURRENCY,

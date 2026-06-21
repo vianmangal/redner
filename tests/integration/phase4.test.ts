@@ -10,8 +10,6 @@ import {
 import { createDatabaseClient } from "@redner/database";
 import { createRedisConnection } from "@redner/queue";
 import {
-  createWorkerRuntime,
-  loadWorkerConfig,
   RedisProjectLockManager,
 } from "@redner/worker";
 
@@ -20,29 +18,27 @@ const databaseUrl =
   "postgresql://redner:redner@localhost:5432/redner?schema=public";
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 
-test("deploy API queues one job and the worker loads its snapshot", async (context) => {
+test("deploy API stores a snapshot before queueing one job", async (context) => {
   const config = loadConfig({
     NODE_ENV: "test",
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
   });
   const dependencies = createDependencies(config);
+  await dependencies.deploymentQueue.close();
+  let enqueuedDeploymentId: string | undefined;
+  dependencies.deploymentQueue = {
+    enqueue: async (deploymentId) => {
+      enqueuedDeploymentId = deploymentId;
+    },
+    close: async () => undefined,
+  };
   const app = buildApp({ dependencies, logger: false });
-  const worker = createWorkerRuntime(
-    loadWorkerConfig({
-      NODE_ENV: "test",
-      DATABASE_URL: databaseUrl,
-      REDIS_URL: redisUrl,
-      WORKER_CONCURRENCY: "1",
-      DEPLOYMENT_LOCK_TTL_MS: "30000",
-    }),
-  );
   const database = createDatabaseClient(databaseUrl);
   const slug = `phase-four-${Date.now()}`;
   let projectId: string | undefined;
 
   context.after(async () => {
-    await worker.close();
     if (projectId !== undefined) {
       await database.project.deleteMany({ where: { id: projectId } });
     }
@@ -70,6 +66,7 @@ test("deploy API queues one job and the worker loads its snapshot", async (conte
   });
   assert.equal(queued.statusCode, 202);
   const deploymentId = queued.json().deployment.id as string;
+  assert.equal(enqueuedDeploymentId, deploymentId);
 
   const duplicate = await app.inject({
     method: "POST",
@@ -77,15 +74,13 @@ test("deploy API queues one job and the worker loads its snapshot", async (conte
   });
   assert.equal(duplicate.statusCode, 409);
 
-  const stored = await waitForWorkerLogs(database, deploymentId);
+  const stored = await database.deployment.findUniqueOrThrow({
+    where: { id: deploymentId },
+    include: { logs: { orderBy: { sequence: "asc" } } },
+  });
   assert.equal(stored.snapshotSlug, slug);
   assert.equal(stored.snapshotBranch, "main");
-  assert.deepEqual(
-    stored.logs.map((entry) => entry.sequence),
-    [1, 2, 3, 4],
-  );
-  assert.match(stored.logs[1]?.message ?? "", /Worker accepted/);
-  assert.match(stored.logs[2]?.message ?? "", /loaded.*PostgreSQL/);
+  assert.deepEqual(stored.logs.map((entry) => entry.sequence), [1]);
 
   const listed = await app.inject({
     method: "GET",
@@ -150,23 +145,3 @@ test("Redis project lock excludes concurrent workers and releases by token", asy
     }
   }
 });
-
-async function waitForWorkerLogs(
-  database: ReturnType<typeof createDatabaseClient>,
-  deploymentId: string,
-) {
-  const deadline = Date.now() + 5_000;
-
-  while (Date.now() < deadline) {
-    const deployment = await database.deployment.findUniqueOrThrow({
-      where: { id: deploymentId },
-      include: { logs: { orderBy: { sequence: "asc" } } },
-    });
-    if (deployment.logs.length >= 4) {
-      return deployment;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-
-  throw new Error("Worker did not persist the expected logs within 5 seconds");
-}

@@ -99,22 +99,22 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Create a unique temporary directory per deployment
-- [ ] Execute processes with argument arrays and `shell: false`
-- [ ] Shallow-clone the selected public GitHub branch
-- [ ] Record the resolved commit hash
-- [ ] Reject repositories without a root `Dockerfile`
-- [ ] Build an image tagged with project and deployment IDs
-- [ ] Stream bounded stdout and stderr into ordered build logs
-- [ ] Add clone and build timeouts
-- [ ] Clean temporary directories on success and failure
+- [x] Create a unique temporary directory per deployment
+- [x] Execute processes with argument arrays and `shell: false`
+- [x] Shallow-clone the selected public GitHub branch
+- [x] Record the resolved commit hash
+- [x] Reject repositories without a root `Dockerfile`
+- [x] Build an image tagged with project and deployment IDs
+- [x] Stream bounded stdout and stderr into ordered build logs
+- [x] Add clone and build timeouts
+- [x] Clean temporary directories on success and failure
 
 ### Done when
 
-- [ ] The test repository produces a Docker image
-- [ ] Invalid repositories, branches, and builds fail cleanly
-- [ ] User-controlled values are never interpolated into shell strings
-- [ ] Clone and build logs appear in correct order
+- [x] The test repository produces a Docker image
+- [x] Invalid repositories, branches, and builds fail cleanly
+- [x] User-controlled values are never interpolated into shell strings
+- [x] Clone and build logs appear in correct order
 
 ## Phase 6: Container Lifecycle
 

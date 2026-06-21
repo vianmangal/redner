@@ -3,11 +3,13 @@ import type { Job } from "bullmq";
 import type { DeploymentJobData } from "@redner/queue";
 
 import type { WorkerDeploymentStore } from "./deployment-store.js";
+import type { DeploymentExecutor } from "./clone-build.js";
 import type { ProjectLockManager } from "./project-lock.js";
 
 export function createDeploymentProcessor(
   deployments: WorkerDeploymentStore,
   locks: ProjectLockManager,
+  executor: DeploymentExecutor,
 ): (job: Job<DeploymentJobData>) => Promise<void> {
   return async (job) => {
     const deployment = await deployments.load(job.data.deploymentId);
@@ -30,10 +32,7 @@ export function createDeploymentProcessor(
           deployment.id,
           `Configuration loaded for ${deployment.snapshotSlug} from PostgreSQL`,
         );
-        await deployments.appendSystemLog(
-          deployment.id,
-          "Queue handoff complete; clone and build continue in Phase 5",
-        );
+        await executor.execute(deployment);
       } finally {
         await lock.release();
       }
