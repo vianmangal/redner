@@ -1,6 +1,7 @@
 import type {
   ApiErrorResponse,
   CreateProjectInput,
+  Deployment,
   Project,
 } from "@redner/shared";
 
@@ -69,4 +70,19 @@ export async function deleteProject(id: string): Promise<void> {
   await request<void>(`/projects/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+}
+
+export async function deployProject(id: string): Promise<Deployment> {
+  const response = await request<{ deployment: Deployment }>(
+    `/projects/${encodeURIComponent(id)}/deploy`,
+    { method: "POST" },
+  );
+  return response.deployment;
+}
+
+export async function listDeployments(id: string): Promise<Deployment[]> {
+  const response = await request<{ deployments: Deployment[] }>(
+    `/projects/${encodeURIComponent(id)}/deployments`,
+  );
+  return response.deployments;
 }

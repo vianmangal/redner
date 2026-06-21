@@ -61,6 +61,34 @@ export interface CreateProjectInput {
   appPort: number;
 }
 
+export interface Deployment {
+  id: string;
+  projectId: string;
+  status: DeploymentStatus;
+  trigger: DeploymentTrigger;
+  snapshotRepoUrl: string;
+  snapshotBranch: string;
+  snapshotSlug: string;
+  snapshotAppPort: number;
+  commitHash: string | null;
+  imageName: string | null;
+  containerId: string | null;
+  failureReason: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeploymentLog {
+  id: string;
+  deploymentId: string;
+  sequence: number;
+  type: LogType;
+  message: string;
+  createdAt: string;
+}
+
 export interface ApiErrorDetail {
   field: string;
   message: string;

@@ -5,9 +5,15 @@ import {
   buildApp,
   DuplicateProjectSlugError,
   type AppDependencies,
+  type DeploymentStore,
   type ProjectStore,
 } from "@redner/api";
-import type { CreateProjectInput, Project } from "@redner/shared";
+import type { DeploymentQueue } from "@redner/queue";
+import type {
+  CreateProjectInput,
+  Deployment,
+  Project,
+} from "@redner/shared";
 
 function project(overrides: Partial<Project> = {}): Project {
   return {
@@ -35,9 +41,57 @@ function projectStore(overrides: Partial<ProjectStore> = {}): ProjectStore {
   };
 }
 
+function deployment(overrides: Partial<Deployment> = {}): Deployment {
+  return {
+    id: "deployment-1",
+    projectId: "project-1",
+    status: "queued",
+    trigger: "manual",
+    snapshotRepoUrl: "https://github.com/example/todo-api.git",
+    snapshotBranch: "main",
+    snapshotSlug: "todo-api",
+    snapshotAppPort: 3000,
+    commitHash: null,
+    imageName: null,
+    containerId: null,
+    failureReason: null,
+    startedAt: null,
+    finishedAt: null,
+    createdAt: "2026-06-21T00:00:00.000Z",
+    updatedAt: "2026-06-21T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function deploymentStore(
+  overrides: Partial<DeploymentStore> = {},
+): DeploymentStore {
+  return {
+    createQueued: async () => ({
+      kind: "created",
+      deployment: deployment(),
+    }),
+    listForProject: async () => [],
+    fail: async () => undefined,
+    ...overrides,
+  };
+}
+
+function deploymentQueue(
+  overrides: Partial<DeploymentQueue> = {},
+): DeploymentQueue {
+  return {
+    enqueue: async () => undefined,
+    close: async () => undefined,
+    ...overrides,
+  };
+}
+
 function dependencies(
   overrides: Partial<AppDependencies["checks"]> = {},
   projects: ProjectStore = projectStore(),
+  deployments: DeploymentStore = deploymentStore(),
+  queue: DeploymentQueue = deploymentQueue(),
 ): AppDependencies {
   return {
     checks: {
@@ -46,6 +100,8 @@ function dependencies(
       ...overrides,
     },
     projects,
+    deployments,
+    deploymentQueue: queue,
     close: async () => undefined,
   };
 }
@@ -205,5 +261,85 @@ test("malformed project IDs return a client error", async (context) => {
       code: "INVALID_PROJECT_ID",
       message: "Project ID is required",
     },
+  });
+});
+
+test("deploy creates a record before enqueueing and returns promptly", async (context) => {
+  const calls: string[] = [];
+  const stored = deployment();
+  const deployments = deploymentStore({
+    createQueued: async () => {
+      calls.push("created");
+      return { kind: "created", deployment: stored };
+    },
+  });
+  const queue = deploymentQueue({
+    enqueue: async (id) => {
+      calls.push(`queued:${id}`);
+    },
+  });
+  const app = buildApp({
+    dependencies: dependencies({}, projectStore(), deployments, queue),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/deploy",
+  });
+
+  assert.equal(response.statusCode, 202);
+  assert.deepEqual(response.json(), { deployment: stored });
+  assert.deepEqual(calls, ["created", "queued:deployment-1"]);
+});
+
+test("deploy rejects a second active deployment", async (context) => {
+  const deployments = deploymentStore({
+    createQueued: async () => ({ kind: "conflict" }),
+  });
+  const app = buildApp({
+    dependencies: dependencies({}, projectStore(), deployments),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/deploy",
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error.code, "DEPLOYMENT_ACTIVE");
+});
+
+test("queue failures mark the deployment failed", async (context) => {
+  let failure: { id: string; reason: string } | undefined;
+  const deployments = deploymentStore({
+    fail: async (id, reason) => {
+      failure = { id, reason };
+    },
+  });
+  const queue = deploymentQueue({
+    enqueue: async () => {
+      throw new Error("redis unavailable");
+    },
+  });
+  const app = buildApp({
+    dependencies: dependencies({}, projectStore(), deployments, queue),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/deploy",
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error.code, "QUEUE_UNAVAILABLE");
+  assert.deepEqual(failure, {
+    id: "deployment-1",
+    reason: "The deployment queue is unavailable",
   });
 });

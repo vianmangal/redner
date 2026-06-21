@@ -38,8 +38,8 @@ export default async function ProjectsPage() {
             Your local services
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-            Configure trusted GitHub repositories now. Build and deployment
-            controls arrive in the next phase.
+            Configure trusted GitHub repositories and queue deployment jobs.
+            Repository cloning and image builds arrive in Phase 5.
           </p>
         </div>
         <Link

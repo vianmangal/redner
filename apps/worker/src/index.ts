@@ -5,6 +5,16 @@ export const workspace: WorkspaceInfo = {
   kind: "application",
 };
 
-if (process.env.NODE_ENV !== "test") {
-  console.log("redner worker workspace is ready");
-}
+export { loadWorkerConfig } from "./config.js";
+export {
+  PrismaWorkerDeploymentStore,
+  type DeploymentWorkItem,
+  type WorkerDeploymentStore,
+} from "./deployment-store.js";
+export { createDeploymentProcessor } from "./processor.js";
+export {
+  RedisProjectLockManager,
+  type AcquiredProjectLock,
+  type ProjectLockManager,
+} from "./project-lock.js";
+export { createWorkerRuntime, type WorkerRuntime } from "./runtime.js";

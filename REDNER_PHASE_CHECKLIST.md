@@ -79,21 +79,21 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Create a shared Redis connection configuration
-- [ ] Create the BullMQ deployment queue
-- [ ] Implement `POST /projects/:id/deploy`
-- [ ] Create the deployment record before enqueuing its job
-- [ ] Reject a second active deployment for the same project
-- [ ] Start a worker that receives deployment IDs rather than raw configuration
-- [ ] Add a per-project deployment lock and bounded retry policy
-- [ ] Publish system log events and persist them with increasing sequence IDs
+- [x] Create a shared Redis connection configuration
+- [x] Create the BullMQ deployment queue
+- [x] Implement `POST /projects/:id/deploy`
+- [x] Create the deployment record before enqueuing its job
+- [x] Reject a second active deployment for the same project
+- [x] Start a worker that receives deployment IDs rather than raw configuration
+- [x] Add a per-project deployment lock and bounded retry policy
+- [x] Publish system log events and persist them with increasing sequence IDs
 
 ### Done when
 
-- [ ] Deploy returns promptly with a queued deployment
-- [ ] The worker loads its configuration snapshot from PostgreSQL
-- [ ] Duplicate deploy requests cannot create concurrent project jobs
-- [ ] Worker errors produce a failed deployment and readable log
+- [x] Deploy returns promptly with a queued deployment
+- [x] The worker loads its configuration snapshot from PostgreSQL
+- [x] Duplicate deploy requests cannot create concurrent project jobs
+- [x] Worker errors produce a failed deployment and readable log
 
 ## Phase 5: Clone and Build
 

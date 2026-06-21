@@ -5,6 +5,7 @@ import Fastify, {
 } from "fastify";
 
 import { ApiError } from "./errors.js";
+import { registerDeploymentRoutes } from "./deployments/routes.js";
 import type {
   AppDependencies,
   DependencyName,
@@ -114,6 +115,13 @@ export function buildApp({
 
   void app.register(async (projectApp) =>
     registerProjectRoutes(projectApp, dependencies.projects),
+  );
+  void app.register(async (deploymentApp) =>
+    registerDeploymentRoutes(
+      deploymentApp,
+      dependencies.deployments,
+      dependencies.deploymentQueue,
+    ),
   );
 
   app.addHook("onClose", async () => dependencies.close());

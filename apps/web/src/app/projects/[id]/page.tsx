@@ -2,9 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/status-badge";
-import { ApiClientError, getProject } from "@/lib/api";
+import type { DeploymentStatus } from "@redner/shared";
+
+import { ApiClientError, getProject, listDeployments } from "@/lib/api";
 
 import { DeleteProjectButton } from "./delete-project-button";
+import { DeployProjectButton } from "./deploy-project-button";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +18,25 @@ export default async function ProjectPage({
 }) {
   const { id } = await params;
   let project;
+  let deployments;
 
   try {
-    project = await getProject(id);
+    [project, deployments] = await Promise.all([
+      getProject(id),
+      listDeployments(id),
+    ]);
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 404) {
       notFound();
     }
     throw error;
   }
+
+  const activeDeployment = deployments.find((deployment) =>
+    ["queued", "cloning", "building", "starting"].includes(
+      deployment.status,
+    ),
+  );
 
   return (
     <div>
@@ -48,7 +61,13 @@ export default async function ProjectPage({
             {project.repoUrl}
           </a>
         </div>
-        <DeleteProjectButton id={project.id} name={project.name} />
+        <div className="flex items-start gap-3">
+          <DeployProjectButton
+            id={project.id}
+            disabled={activeDeployment !== undefined}
+          />
+          <DeleteProjectButton id={project.id} name={project.name} />
+        </div>
       </div>
 
       <section className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
@@ -70,16 +89,59 @@ export default async function ProjectPage({
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-blue-700">
-          Configuration saved
+      <section className="mt-8 rounded-2xl border border-line bg-white p-6">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-accent">
+          Deployment queue
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
-          Deployment controls will appear here after the BullMQ queue and worker
-          are implemented in Phase 4.
-        </p>
+        {deployments.length === 0 ? (
+          <p className="mt-2 text-sm leading-6 text-muted">
+            No deployments yet. Queue one to verify the API, Redis, and worker
+            handoff.
+          </p>
+        ) : (
+          <div className="mt-4 divide-y divide-line">
+            {deployments.slice(0, 5).map((deployment) => (
+              <div
+                key={deployment.id}
+                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-xs text-muted">
+                    {deployment.id}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {new Intl.DateTimeFormat("en", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(deployment.createdAt))}
+                  </p>
+                </div>
+                <DeploymentBadge status={deployment.status} />
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
+  );
+}
+
+const deploymentColors: Record<DeploymentStatus, string> = {
+  queued: "border-blue-200 bg-blue-50 text-blue-700",
+  cloning: "border-violet-200 bg-violet-50 text-violet-700",
+  building: "border-amber-200 bg-amber-50 text-amber-700",
+  starting: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  succeeded: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  failed: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+function DeploymentBadge({ status }: { status: DeploymentStatus }) {
+  return (
+    <span
+      className={`rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${deploymentColors[status]}`}
+    >
+      {status}
+    </span>
   );
 }
 

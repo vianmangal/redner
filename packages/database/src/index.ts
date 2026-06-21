@@ -4,7 +4,11 @@ import type { WorkspaceInfo } from "@redner/shared";
 import { PrismaClient } from "./generated/prisma/client.js";
 
 export { Prisma } from "./generated/prisma/client.js";
-export type { Project } from "./generated/prisma/client.js";
+export type {
+  Deployment,
+  Log,
+  Project,
+} from "./generated/prisma/client.js";
 
 export const workspace: WorkspaceInfo = {
   name: "database",

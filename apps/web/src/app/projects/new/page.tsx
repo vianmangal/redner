@@ -17,7 +17,7 @@ export default function NewProjectPage() {
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted">
           Use a trusted public GitHub repository with a Dockerfile. Redner will
-          only save its configuration in this phase.
+          save its configuration and let you verify the deployment queue handoff.
         </p>
         <div className="mt-8">
           <ProjectForm />

@@ -15,9 +15,10 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-Phases 0 through 3 are complete: the npm workspace foundation, local
-infrastructure, Prisma data model, project API, and Next.js dashboard are in
-place. Deployment features have not been implemented yet.
+Phases 0 through 4 are complete: the npm workspace foundation, local
+infrastructure, Prisma data model, project API, Next.js dashboard, BullMQ queue,
+and deployment worker handoff are in place. Repository cloning and Docker image
+builds begin in Phase 5.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)

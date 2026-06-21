@@ -10,6 +10,11 @@ export { loadConfig } from "./config.js";
 export { createDependencies } from "./dependencies.js";
 export { ApiError } from "./errors.js";
 export {
+  PrismaDeploymentStore,
+  type CreateDeploymentResult,
+  type DeploymentStore,
+} from "./deployments/store.js";
+export {
   DuplicateProjectSlugError,
   type DeleteProjectResult,
   type ProjectStore,
