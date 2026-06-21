@@ -2,12 +2,12 @@
 
 @theme {
   --color-ink: #111827;
-  --color-muted: #64748b;
-  --color-line: #e2e8f0;
+  --color-muted: #52627a;
+  --color-line: rgb(255 255 255 / 65%);
   --color-panel: #ffffff;
-  --color-canvas: #f8fafc;
-  --color-accent: #2563eb;
-  --color-accent-dark: #1d4ed8;
+  --color-canvas: #dbeafe;
+  --color-accent: #2854c5;
+  --color-accent-dark: #1d3f9f;
   --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
@@ -24,9 +24,9 @@ html {
 body {
   margin: 0;
   color: var(--color-ink);
-  background:
-    radial-gradient(circle at 12% 0%, rgb(219 234 254 / 45%), transparent 28rem),
-    var(--color-canvas);
+  background: var(--color-canvas);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -40,5 +40,56 @@ input {
 }
 
 .field-input {
-  @apply w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100;
+  @apply w-full rounded-2xl border border-white/75 bg-white/65 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.75)] outline-none backdrop-blur-xl transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white/80 focus:ring-4 focus:ring-blue-200/50;
+}
+
+.silk-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #5f8ee6;
+}
+
+.silk-background > div,
+.silk-background canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.silk-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 12%, rgb(255 255 255 / 52%), transparent 36rem),
+    linear-gradient(135deg, rgb(255 255 255 / 54%), rgb(236 241 255 / 18%));
+}
+
+.glass-panel {
+  border: 1px solid rgb(255 255 255 / 68%);
+  background: rgb(255 255 255 / 58%);
+  box-shadow:
+    0 24px 70px rgb(38 68 148 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 82%);
+  backdrop-filter: blur(24px) saturate(135%);
+}
+
+.glass-panel-strong {
+  border: 1px solid rgb(255 255 255 / 78%);
+  background: rgb(255 255 255 / 68%);
+  box-shadow:
+    0 28px 80px rgb(38 68 148 / 16%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+  backdrop-filter: blur(30px) saturate(140%);
+}
+
+.glass-button {
+  border: 1px solid rgb(255 255 255 / 76%);
+  background: rgb(255 255 255 / 68%);
+  box-shadow:
+    0 12px 30px rgb(46 79 166 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+  backdrop-filter: blur(18px);
 }

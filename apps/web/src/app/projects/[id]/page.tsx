@@ -39,15 +39,15 @@ export default async function ProjectPage({
   );
 
   return (
-    <div>
-      <Link href="/" className="text-sm font-semibold text-muted hover:text-ink">
+    <div className="mx-auto max-w-5xl">
+      <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-muted transition hover:-translate-x-0.5 hover:text-ink">
         &lt;- Back to projects
       </Link>
 
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mt-7 flex flex-col gap-6 px-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-semibold tracking-[-0.045em]">
+            <h1 className="text-4xl font-bold tracking-[-0.05em] sm:text-5xl">
               {project.name}
             </h1>
             <StatusBadge status={project.status} />
@@ -61,7 +61,7 @@ export default async function ProjectPage({
             {project.repoUrl}
           </a>
         </div>
-        <div className="flex items-start gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           <DeployProjectButton
             id={project.id}
             disabled={activeDeployment !== undefined}
@@ -70,7 +70,7 @@ export default async function ProjectPage({
         </div>
       </div>
 
-      <section className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+      <section className="glass-panel mt-10 grid gap-px overflow-hidden rounded-[2rem] bg-white/35 sm:grid-cols-2">
         <Detail label="Local hostname" value={`${project.slug}.localhost`} mono />
         <Detail label="Runtime status" value={project.status} />
         <Detail label="Git branch" value={project.branch} mono />
@@ -89,8 +89,8 @@ export default async function ProjectPage({
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border border-line bg-white p-6">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-accent">
+      <section className="glass-panel-strong mt-8 rounded-[2rem] p-6 sm:p-7">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
           Deployment queue
         </p>
         {deployments.length === 0 ? (
@@ -103,7 +103,7 @@ export default async function ProjectPage({
             {deployments.slice(0, 5).map((deployment) => (
               <div
                 key={deployment.id}
-                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
               >
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs text-muted">
@@ -155,7 +155,7 @@ function Detail({
   mono?: boolean;
 }) {
   return (
-    <div className="bg-white p-5">
+    <div className="bg-white/45 p-5 backdrop-blur-xl">
       <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>

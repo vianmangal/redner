@@ -2,7 +2,7 @@
 
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
-    <section className="rounded-2xl border border-rose-200 bg-rose-50 p-8">
+    <section className="glass-panel-strong rounded-3xl border-rose-200/70 p-8">
       <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-rose-700">
         Something went wrong
       </p>
@@ -12,7 +12,7 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
       <button
         type="button"
         onClick={reset}
-        className="mt-6 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white"
+        className="mt-6 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5"
       >
         Try again
       </button>

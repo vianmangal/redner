@@ -105,7 +105,7 @@ export function ProjectForm() {
         hint="Used for the local hostname"
         error={fieldError("slug")}
       >
-        <div className="flex rounded-xl border border-line bg-white focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
+        <div className="flex rounded-2xl border border-white/75 bg-white/65 shadow-[inset_0_1px_0_rgb(255_255_255/0.75)] backdrop-blur-xl transition focus-within:border-blue-300 focus-within:bg-white/80 focus-within:ring-4 focus-within:ring-blue-200/50">
           <input
             id="slug"
             value={form.slug}
@@ -116,9 +116,9 @@ export function ProjectForm() {
             placeholder="todo-api"
             required
             maxLength={63}
-            className="min-w-0 flex-1 rounded-l-xl px-3.5 py-3 text-sm outline-none"
+            className="min-w-0 flex-1 rounded-l-2xl bg-transparent px-4 py-3 text-sm outline-none placeholder:text-slate-400"
           />
-          <span className="flex items-center border-l border-line bg-canvas px-3 font-mono text-xs text-muted">
+          <span className="flex items-center border-l border-white/70 bg-white/30 px-3 text-xs font-medium text-muted">
             .localhost
           </span>
         </div>
@@ -169,18 +169,18 @@ export function ProjectForm() {
         </Field>
       </div>
 
-      <div className="flex items-center justify-end gap-3 border-t border-line pt-6">
+      <div className="flex items-center justify-end gap-3 border-t border-white/60 pt-6">
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-slate-100"
+          className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-muted transition hover:bg-white/50"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgb(40_84_197/0.24)] transition hover:-translate-y-0.5 hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Creating..." : "Create project"}
         </button>

@@ -32,7 +32,7 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
   return (
     <div className="flex flex-col items-end">
       {confirming ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-left">
+        <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 p-3 text-left shadow-lg backdrop-blur-xl">
           <p className="text-xs font-medium text-rose-800">
             Delete {name}? This cannot be undone.
           </p>
@@ -41,7 +41,7 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
               type="button"
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white"
+              className="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white/75"
             >
               Cancel
             </button>
@@ -49,7 +49,7 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
               type="button"
               onClick={remove}
               disabled={deleting}
-              className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+              className="rounded-xl bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
             >
               {deleting ? "Deleting..." : "Confirm delete"}
             </button>
@@ -59,7 +59,7 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+          className="glass-button rounded-2xl border-rose-200/80 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:-translate-y-0.5 hover:bg-rose-50/75"
         >
           Delete project
         </button>
