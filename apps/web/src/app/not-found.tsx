@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <section className="rounded-2xl border border-line bg-white p-10 text-center shadow-sm">
+    <section className="rounded-2xl border border-line bg-panel p-10 text-center shadow-sm">
       <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-muted">
         404
       </p>

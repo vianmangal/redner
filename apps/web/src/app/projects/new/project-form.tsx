@@ -75,10 +75,10 @@ export function ProjectForm() {
   return (
     <form onSubmit={submit} className="space-y-6">
       {error !== null && (
-        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4">
-          <p className="text-sm font-semibold text-rose-800">{error}</p>
+        <div role="alert" className="rounded-xl border border-red-950 bg-red-950/30 p-4">
+          <p className="text-sm font-semibold text-red-300">{error}</p>
           {details.length > 0 && (
-            <ul className="mt-2 list-inside list-disc text-sm text-rose-700">
+            <ul className="mt-2 list-inside list-disc text-sm text-red-400">
               {details.map((detail) => (
                 <li key={`${detail.field}-${detail.message}`}>{detail.message}</li>
               ))}
@@ -105,7 +105,7 @@ export function ProjectForm() {
         hint="Used for the local hostname"
         error={fieldError("slug")}
       >
-        <div className="flex rounded-xl border border-line bg-white focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
+        <div className="flex rounded-xl border border-line bg-panel focus-within:border-neutral-500 focus-within:ring-4 focus-within:ring-white/10">
           <input
             id="slug"
             value={form.slug}
@@ -116,7 +116,7 @@ export function ProjectForm() {
             placeholder="todo-api"
             required
             maxLength={63}
-            className="min-w-0 flex-1 rounded-l-xl px-3.5 py-3 text-sm outline-none"
+            className="min-w-0 flex-1 rounded-l-xl bg-transparent px-3.5 py-3 text-sm text-ink outline-none placeholder:text-neutral-600"
           />
           <span className="flex items-center border-l border-line bg-canvas px-3 font-mono text-xs text-muted">
             .localhost
@@ -173,14 +173,14 @@ export function ProjectForm() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-slate-100"
+          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-neutral-900"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-black shadow-sm transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Creating..." : "Create project"}
         </button>
@@ -211,7 +211,7 @@ function Field({
         {hint !== undefined && <span className="text-xs text-muted">{hint}</span>}
       </div>
       {children}
-      {error !== undefined && <p className="mt-1.5 text-xs text-rose-700">{error}</p>}
+      {error !== undefined && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
     </div>
   );
 }

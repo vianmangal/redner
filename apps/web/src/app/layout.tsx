@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <div className="min-h-screen">
-          <header className="border-b border-line/80 bg-white/80 backdrop-blur">
+          <header className="border-b border-line/80 bg-black/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
               <Link
                 href="/"

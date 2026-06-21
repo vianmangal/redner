@@ -12,14 +12,14 @@ export default async function ProjectsPage() {
     projects = await listProjects();
   } catch {
     return (
-      <section className="rounded-2xl border border-rose-200 bg-rose-50 p-8">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-rose-700">
+      <section className="rounded-2xl border border-red-950 bg-red-950/30 p-8">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-red-400">
           API unavailable
         </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
           The dashboard could not reach redner.
         </h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+        <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">
           Start the API on port 4000, then refresh this page. PostgreSQL and Redis
           must also be healthy.
         </p>
@@ -44,14 +44,14 @@ export default async function ProjectsPage() {
         </div>
         <Link
           href="/projects/new"
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-black shadow-sm transition hover:bg-accent-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           New project
         </Link>
       </div>
 
       {projects.length === 0 ? (
-        <section className="mt-12 rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
+        <section className="mt-12 rounded-2xl border border-dashed border-neutral-700 bg-panel/70 px-6 py-16 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-line bg-canvas font-mono text-lg text-muted">
             +
           </div>

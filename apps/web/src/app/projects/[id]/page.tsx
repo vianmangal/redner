@@ -70,11 +70,11 @@ export default async function ProjectPage({
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-blue-700">
+      <section className="mt-8 rounded-2xl border border-line bg-panel p-6">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-neutral-300">
           Configuration saved
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Deployment controls will appear here after the BullMQ queue and worker
           are implemented in Phase 4.
         </p>
@@ -93,7 +93,7 @@ function Detail({
   mono?: boolean;
 }) {
   return (
-    <div className="bg-white p-5">
+    <div className="bg-panel p-5">
       <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>

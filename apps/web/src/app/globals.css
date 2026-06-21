@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #111827;
-  --color-muted: #64748b;
-  --color-line: #e2e8f0;
-  --color-panel: #ffffff;
-  --color-canvas: #f8fafc;
-  --color-accent: #2563eb;
-  --color-accent-dark: #1d4ed8;
-  --font-sans: "Inter", "SF Pro Text", "Segoe UI", sans-serif;
-  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
+  --color-ink: #f5f5f5;
+  --color-muted: #a3a3a3;
+  --color-line: #292929;
+  --color-panel: #111111;
+  --color-canvas: #050505;
+  --color-accent: #ffffff;
+  --color-accent-dark: #d4d4d4;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -25,8 +25,9 @@ body {
   margin: 0;
   color: var(--color-ink);
   background:
-    radial-gradient(circle at 12% 0%, rgb(219 234 254 / 45%), transparent 28rem),
+    radial-gradient(circle at 12% 0%, rgb(255 255 255 / 7%), transparent 28rem),
     var(--color-canvas);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 button,
@@ -35,10 +36,10 @@ input {
 }
 
 ::selection {
-  color: #ffffff;
+  color: #000000;
   background: var(--color-accent);
 }
 
 .field-input {
-  @apply w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100;
+  @apply w-full rounded-xl border border-line bg-panel px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-neutral-600 focus:border-neutral-500 focus:ring-4 focus:ring-white/10;
 }
