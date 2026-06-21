@@ -1,10 +1,10 @@
 import type { ProjectStatus } from "@redner/shared";
 
 const colors: Record<ProjectStatus, string> = {
-  idle: "border-neutral-700 bg-neutral-900 text-neutral-400",
-  running: "border-emerald-900 bg-emerald-950/50 text-emerald-400",
-  unhealthy: "border-amber-900 bg-amber-950/50 text-amber-400",
-  stopped: "border-red-900 bg-red-950/50 text-red-400",
+  idle: "border-slate-200 bg-slate-50 text-slate-600",
+  running: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  unhealthy: "border-amber-200 bg-amber-50 text-amber-700",
+  stopped: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
 export function StatusBadge({ status }: { status: ProjectStatus }) {

@@ -2,8 +2,8 @@
 
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
-    <section className="rounded-2xl border border-red-950 bg-red-950/30 p-8">
-      <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-red-400">
+    <section className="rounded-2xl border border-rose-200 bg-rose-50 p-8">
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.15em] text-rose-700">
         Something went wrong
       </p>
       <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
@@ -12,7 +12,7 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
       <button
         type="button"
         onClick={reset}
-        className="mt-6 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-black"
+        className="mt-6 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white"
       >
         Try again
       </button>

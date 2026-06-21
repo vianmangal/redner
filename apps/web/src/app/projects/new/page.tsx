@@ -8,7 +8,7 @@ export default function NewProjectPage() {
       <Link href="/" className="text-sm font-semibold text-muted hover:text-ink">
         &lt;- Back to projects
       </Link>
-      <div className="mt-6 rounded-2xl border border-line bg-panel p-6 shadow-sm sm:p-8">
+      <div className="mt-6 rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-8">
         <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-accent">
           New project
         </p>
