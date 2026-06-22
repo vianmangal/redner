@@ -46,8 +46,6 @@ services:
       - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTPS_PORT:-443}:443"
     environment:
       REDNER_DASHBOARD_DOMAIN: ${REDNER_DASHBOARD_DOMAIN:-localhost}
-      REDNER_ADMIN_USER: ${REDNER_ADMIN_USER:-admin}
-      REDNER_ADMIN_PASSWORD_HASH: ${REDNER_ADMIN_PASSWORD_HASH:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

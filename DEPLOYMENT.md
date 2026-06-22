@@ -41,18 +41,9 @@ REDNER_BASE_DOMAIN=apps.example.com
 CADDY_BIND_ADDRESS=0.0.0.0
 CADDYFILE_PATH=./Caddyfile.production
 REDNER_DASHBOARD_DOMAIN=redner.example.com
-REDNER_ADMIN_USER=admin
-REDNER_ADMIN_PASSWORD_HASH='replace-with-caddy-bcrypt-hash'
 ```
 
-Generate the database password with `openssl rand -hex 24`. Generate the Caddy
-hash interactively with:
-
-```bash
-docker run --rm -it caddy:2-alpine caddy hash-password
-```
-
-Keep the hash single-quoted in `.env` so Compose preserves its dollar signs.
+Generate the database password with `openssl rand -hex 24`.
 The `NEXT_PUBLIC_*` values are embedded during `npm run build`; rebuild after
 changing them.
 
@@ -78,9 +69,13 @@ curl http://127.0.0.1:4000/health
 ```
 
 Caddy obtains and renews public certificates automatically after the DNS
-records resolve to the VPS and ports 80 and 443 are reachable. The dashboard
-must remain protected by Caddy authentication because redner does not provide
-application-level user accounts.
+records resolve to the VPS and ports 80 and 443 are reachable.
+
+> [!WARNING]
+> This example exposes the dashboard and deployment API publicly without
+> authentication. Anyone who can reach it can build and run repository code on
+> the server. Add an authentication layer before using it outside a controlled
+> learning environment.
 
 ## Update
 

@@ -3,10 +3,6 @@
 }
 
 {$REDNER_DASHBOARD_DOMAIN} {
-	basic_auth {
-		{$REDNER_ADMIN_USER} {$REDNER_ADMIN_PASSWORD_HASH}
-	}
-
 	handle_path /api/* {
 		reverse_proxy host.docker.internal:4000
 	}
