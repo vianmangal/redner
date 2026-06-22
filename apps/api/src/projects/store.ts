@@ -63,7 +63,15 @@ export class PrismaProjectStore implements ProjectStore {
         activeDeploymentId: true,
         deployments: {
           where: {
-            status: { in: ["queued", "cloning", "building", "starting"] },
+            status: {
+              in: [
+                "queued",
+                "cloning",
+                "building",
+                "starting",
+                "cancelling",
+              ],
+            },
           },
           select: { id: true },
           take: 1,

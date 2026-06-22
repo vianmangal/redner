@@ -6,6 +6,7 @@ export interface DeploymentCancellationHandle {
 export interface DeploymentCancellationManager {
   register(deploymentId: string): DeploymentCancellationHandle;
   cancel(deploymentId: string): boolean;
+  cancelAll(): void;
 }
 
 export class LocalDeploymentCancellationManager
@@ -31,5 +32,9 @@ export class LocalDeploymentCancellationManager
     if (controller === undefined) return false;
     controller.abort();
     return true;
+  }
+
+  cancelAll(): void {
+    for (const controller of this.controllers.values()) controller.abort();
   }
 }

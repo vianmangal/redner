@@ -69,8 +69,23 @@ export async function registerDeploymentLogRoutes(
       }
     };
     const unsubscribe = await subscriber.subscribe(deploymentId, listener);
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let cleanupPromise: Promise<void> | undefined;
+    const cleanup = () => {
+      if (heartbeat !== undefined) clearInterval(heartbeat);
+      cleanupPromise ??= unsubscribe();
+      return cleanupPromise;
+    };
+    const handleClose = () => {
+      void cleanup().catch(() => undefined);
+    };
+    request.raw.once("close", handleClose);
 
     try {
+      if (request.raw.destroyed || reply.raw.destroyed) {
+        await cleanup();
+        return;
+      }
       const responseHeaders = reply.getHeaders();
       reply.hijack();
       for (const [name, value] of Object.entries(responseHeaders)) {
@@ -83,7 +98,7 @@ export async function registerDeploymentLogRoutes(
       reply.raw.writeHead(200);
       reply.raw.write("retry: 2000\n\n");
 
-      while (true) {
+      while (!reply.raw.destroyed) {
         const backlog = await logs.listAfter(deploymentId, lastSent, 500);
         for (const log of backlog) {
           writeLog(reply, log);
@@ -91,24 +106,31 @@ export async function registerDeploymentLogRoutes(
         }
         if (backlog.length < 500) break;
       }
+      if (reply.raw.destroyed) {
+        await cleanup();
+        return;
+      }
 
       streaming = true;
-      for (const log of buffered.sort((left, right) => left.sequence - right.sequence)) {
+      for (const log of buffered.sort(
+        (left, right) => left.sequence - right.sequence,
+      )) {
         if (log.sequence > lastSent) {
           writeLog(reply, log);
           lastSent = log.sequence;
         }
       }
+      if (reply.raw.destroyed || cleanupPromise !== undefined) {
+        await cleanup();
+        return;
+      }
 
-      const heartbeat = setInterval(() => {
+      heartbeat = setInterval(() => {
         if (!reply.raw.destroyed) reply.raw.write(": heartbeat\n\n");
       }, 15_000);
-      request.raw.once("close", () => {
-        clearInterval(heartbeat);
-        void unsubscribe().catch(() => undefined);
-      });
     } catch (error) {
-      await unsubscribe();
+      request.raw.off("close", handleClose);
+      await cleanup();
       throw error;
     }
   });

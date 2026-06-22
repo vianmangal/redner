@@ -6,6 +6,7 @@ import {
   createDependencies,
   loadConfig,
 } from "@redner/api";
+import { createDatabaseClient } from "@redner/database";
 
 test("project API persists a complete CRUD lifecycle", async (context) => {
   const config = loadConfig({ NODE_ENV: "test" });
@@ -85,4 +86,53 @@ test("project API persists a complete CRUD lifecycle", async (context) => {
     url: `/projects/${created.json().project.id}`,
   });
   assert.equal(missing.statusCode, 404);
+});
+
+test("project deletion is blocked while cancellation cleanup is pending", async () => {
+  const config = loadConfig({ NODE_ENV: "test" });
+  const dependencies = createDependencies(config);
+  const database = createDatabaseClient(config.DATABASE_URL);
+  const app = buildApp({ dependencies, logger: false });
+  let projectId: string | undefined;
+
+  try {
+    const project = await database.project.create({
+      data: {
+        name: "Cancelling Project",
+        slug: `cancelling-delete-${Date.now()}`,
+        repoUrl: "https://github.com/example/app.git",
+        branch: "main",
+        appPort: 3000,
+      },
+    });
+    projectId = project.id;
+    await database.deployment.create({
+      data: {
+        projectId,
+        status: "cancelling",
+        snapshotRepoUrl: project.repoUrl,
+        snapshotBranch: project.branch,
+        snapshotSlug: project.slug,
+        snapshotAppPort: project.appPort,
+      },
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/projects/${project.id}`,
+    });
+
+    assert.equal(response.statusCode, 409);
+    assert.equal(response.json().error.code, "PROJECT_ACTIVE");
+    assert.notEqual(
+      await database.project.findUnique({ where: { id: project.id } }),
+      null,
+    );
+  } finally {
+    if (projectId !== undefined) {
+      await database.project.deleteMany({ where: { id: projectId } });
+    }
+    await app.close();
+    await database.$disconnect();
+  }
 });

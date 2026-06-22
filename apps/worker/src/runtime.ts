@@ -127,6 +127,7 @@ export async function createWorkerRuntime(
 
   return {
     close: async () => {
+      cancellations.cancelAll();
       await worker.close();
       await actionWorker.close();
       const unsubscribeCancellation = await cancellationSubscription;

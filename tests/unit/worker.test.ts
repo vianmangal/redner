@@ -211,3 +211,14 @@ test("worker aborts active execution and marks the deployment cancelled", async 
   assert.equal(released, true);
   assert.equal(deployments.getFailure(), undefined);
 });
+
+test("worker shutdown cancellation aborts every active deployment", () => {
+  const cancellations = new LocalDeploymentCancellationManager();
+  const first = cancellations.register("deployment-1");
+  const second = cancellations.register("deployment-2");
+
+  cancellations.cancelAll();
+
+  assert.equal(first.signal.aborted, true);
+  assert.equal(second.signal.aborted, true);
+});

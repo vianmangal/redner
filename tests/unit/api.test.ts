@@ -4,11 +4,13 @@ import test from "node:test";
 import {
   buildApp,
   DuplicateProjectSlugError,
+  PrismaDeploymentStore,
   type AppDependencies,
   type DeploymentStore,
   type DeploymentLogStore,
   type ProjectStore,
 } from "@redner/api";
+import { Prisma, type DatabaseClient } from "@redner/database";
 import type {
   DeploymentCancellationPublisher,
   DeploymentLogSubscriber,
@@ -404,7 +406,10 @@ test("project runtime actions verify the project and enqueue work", async (conte
   const app = buildApp({
     dependencies: dependencies(
       {},
-      projectStore({ findById: async () => project() }),
+      projectStore({
+        findById: async () =>
+          project({ status: "running", activeDeploymentId: "deployment-1" }),
+      }),
       deploymentStore(),
       deploymentQueue(),
       actions,
@@ -421,6 +426,40 @@ test("project runtime actions verify the project and enqueue work", async (conte
   assert.equal(response.statusCode, 202);
   assert.deepEqual(response.json(), { action: "stop", status: "queued" });
   assert.deepEqual(calls, ["project-1:stop"]);
+});
+
+test("project runtime actions reject impossible state transitions", async (context) => {
+  const calls: string[] = [];
+  const actions: ProjectActionQueue = {
+    enqueue: async (projectId, action) => calls.push(`${projectId}:${action}`),
+    close: async () => undefined,
+  };
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore({ findById: async () => project() }),
+      deploymentStore(),
+      deploymentQueue(),
+      actions,
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const stop = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/stop",
+  });
+  const restart = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/restart",
+  });
+
+  assert.equal(stop.statusCode, 409);
+  assert.equal(stop.json().error.code, "PROJECT_NOT_DEPLOYED");
+  assert.equal(restart.statusCode, 409);
+  assert.equal(restart.json().error.code, "PROJECT_NOT_DEPLOYED");
+  assert.deepEqual(calls, []);
 });
 
 test("project runtime actions reject missing projects", async (context) => {
@@ -444,7 +483,10 @@ test("project runtime actions report queue failures", async (context) => {
   const app = buildApp({
     dependencies: dependencies(
       {},
-      projectStore({ findById: async () => project() }),
+      projectStore({
+        findById: async () =>
+          project({ status: "stopped", activeDeploymentId: "deployment-1" }),
+      }),
       deploymentStore(),
       deploymentQueue(),
       actions,
@@ -460,6 +502,55 @@ test("project runtime actions report queue failures", async (context) => {
 
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error.code, "QUEUE_UNAVAILABLE");
+});
+
+test("cancellation retries a concurrent log sequence conflict", async () => {
+  let attempts = 0;
+  const conflict = new Prisma.PrismaClientKnownRequestError(
+    "Log sequence conflict",
+    { code: "P2002", clientVersion: "test" },
+  );
+  const database = {
+    $transaction: async () => {
+      attempts += 1;
+      if (attempts === 1) throw conflict;
+      return { kind: "requested", log: null };
+    },
+  } as unknown as DatabaseClient;
+  const store = new PrismaDeploymentStore(database);
+
+  assert.deepEqual(await store.requestCancellation("deployment-1"), {
+    kind: "requested",
+  });
+  assert.equal(attempts, 2);
+});
+
+test("SSE disconnect unsubscribes even before backlog setup completes", async (context) => {
+  let unsubscribeCalls = 0;
+  const appDependencies = dependencies();
+  appDependencies.logs = logStore();
+  appDependencies.logSubscriber = {
+    subscribe: async () => async () => {
+      unsubscribeCalls += 1;
+    },
+    close: async () => undefined,
+  };
+  const app = buildApp({ dependencies: appDependencies, logger: false });
+  context.after(() => app.close());
+  const address = await app.listen({ host: "127.0.0.1", port: 0 });
+  const abort = new AbortController();
+  const response = await fetch(`${address}/deployments/deployment-1/logs/stream`, {
+    signal: abort.signal,
+  });
+
+  abort.abort();
+  await response.body?.cancel().catch(() => undefined);
+  const deadline = Date.now() + 1_000;
+  while (unsubscribeCalls === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  assert.equal(unsubscribeCalls, 1);
 });
 
 test("deployment detail and paginated logs are returned in sequence", async (context) => {
