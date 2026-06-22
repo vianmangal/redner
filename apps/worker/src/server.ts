@@ -1,7 +1,7 @@
 import { loadWorkerConfig } from "./config.js";
 import { createWorkerRuntime } from "./runtime.js";
 
-const runtime = createWorkerRuntime(loadWorkerConfig());
+const runtime = await createWorkerRuntime(loadWorkerConfig());
 
 const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
   console.log(`received ${signal}; shutting down worker`);

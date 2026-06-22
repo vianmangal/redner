@@ -120,6 +120,7 @@ function deploymentQueue(
   return {
     enqueue: async () => undefined,
     cancelWaiting: async () => false,
+    hasJob: async () => false,
     close: async () => undefined,
     ...overrides,
   };

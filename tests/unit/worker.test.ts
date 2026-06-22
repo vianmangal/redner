@@ -83,6 +83,39 @@ test("worker loads the snapshot, writes logs, and releases the project lock", as
   assert.equal(deployments.getFailure(), undefined);
 });
 
+test("worker ignores a stale retry for a terminal deployment", async () => {
+  const deployments = store({
+    load: async () => ({
+      id: "deployment-1",
+      status: "succeeded",
+      projectId: "project-1",
+      snapshotRepoUrl: "https://github.com/example/todo.git",
+      snapshotBranch: "main",
+      snapshotSlug: "todo",
+      snapshotAppPort: 3000,
+    }),
+  });
+  let acquired = false;
+  const locks: ProjectLockManager = {
+    acquire: async () => {
+      acquired = true;
+      return null;
+    },
+  };
+  let executed = false;
+  const executor: DeploymentExecutor = {
+    execute: async () => {
+      executed = true;
+    },
+  };
+
+  await createDeploymentProcessor(deployments.value, locks, executor)(job());
+
+  assert.equal(acquired, false);
+  assert.equal(executed, false);
+  assert.deepEqual(deployments.logs, []);
+});
+
 test("worker retries lock contention and marks the final attempt failed", async () => {
   const deployments = store();
   const locks: ProjectLockManager = { acquire: async () => null };

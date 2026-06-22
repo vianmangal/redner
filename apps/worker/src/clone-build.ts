@@ -39,6 +39,7 @@ export class CloneBuildExecutor implements DeploymentExecutor {
       join(this.config.buildRoot, `${deployment.id}-`),
     );
     const imageName = `redner-${deployment.projectId}:${deployment.id}`;
+    let buildStarted = false;
 
     try {
       await this.deployments.markCloning(deployment.id);
@@ -46,6 +47,7 @@ export class CloneBuildExecutor implements DeploymentExecutor {
         deployment.id,
         `Cloning ${deployment.snapshotRepoUrl} at ${deployment.snapshotBranch}`,
       );
+      buildStarted = true;
       await this.process(
         "git",
         [
@@ -103,6 +105,19 @@ export class CloneBuildExecutor implements DeploymentExecutor {
         "Image build complete",
       );
       await this.containers?.promote(deployment, imageName, signal);
+    } catch (error) {
+      if (buildStarted) {
+        await this.process(
+          "docker",
+          ["image", "rm", "--force", imageName],
+          {
+            timeoutMs: 30_000,
+            maxLines: 100,
+            maxLineLength: this.config.maxLogLineLength,
+          },
+        ).catch(() => undefined);
+      }
+      throw error;
     } finally {
       await rm(workDirectory, { recursive: true, force: true });
     }

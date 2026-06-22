@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 
 import { createDatabaseClient } from "@redner/database";
 import {
+  BullDeploymentQueue,
   createBullConnectionOptions,
   createRedisConnection,
   DEPLOYMENT_QUEUE_NAME,
@@ -21,25 +22,18 @@ import { RedisProjectLockManager } from "./project-lock.js";
 import { createProjectActionProcessor } from "./project-actions.js";
 import { DockerRuntimeLogCollector } from "./runtime-logs.js";
 import { LocalDeploymentCancellationManager } from "./deployment-cancellation.js";
+import { WorkerReconciler } from "./reconciler.js";
 
 export interface WorkerRuntime {
   close(): Promise<void>;
 }
 
-export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
+export async function createWorkerRuntime(
+  config: WorkerConfig,
+): Promise<WorkerRuntime> {
   const database = createDatabaseClient(config.DATABASE_URL);
   const lockConnection = createRedisConnection(config.REDIS_URL, "worker");
   const logPublisher = new RedisDeploymentLogPublisher(config.REDIS_URL);
-  const cancellationSubscriber = new RedisDeploymentCancellationSubscriber(
-    config.REDIS_URL,
-  );
-  const cancellations = new LocalDeploymentCancellationManager();
-  const cancellationSubscription = cancellationSubscriber
-    .subscribe((deploymentId) => cancellations.cancel(deploymentId))
-    .catch((error) => {
-      console.error("deployment cancellation subscriber error", error);
-      return undefined;
-    });
   const deployments = new PrismaWorkerDeploymentStore(
     database,
     logPublisher,
@@ -50,6 +44,33 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
     deployments,
     config.MAX_LOG_LINE_LENGTH,
   );
+  const recoveryQueue = new BullDeploymentQueue(config.REDIS_URL);
+  try {
+    await new WorkerReconciler(
+      database,
+      deployments,
+      recoveryQueue,
+      {
+        buildRoot: config.REDNER_BUILD_ROOT,
+        caddyContainer: config.REDNER_CADDY_CONTAINER,
+        caddyRoutesDir: config.REDNER_CADDY_ROUTES_DIR,
+      },
+      undefined,
+      runtimeLogs,
+    ).reconcile();
+  } finally {
+    await recoveryQueue.close();
+  }
+  const cancellationSubscriber = new RedisDeploymentCancellationSubscriber(
+    config.REDIS_URL,
+  );
+  const cancellations = new LocalDeploymentCancellationManager();
+  const cancellationSubscription = cancellationSubscriber
+    .subscribe((deploymentId) => cancellations.cancel(deploymentId))
+    .catch((error) => {
+      console.error("deployment cancellation subscriber error", error);
+      return undefined;
+    });
   const containers = new DockerContainerLifecycle(deployments, {
     proxyNetwork: config.REDNER_PROXY_NETWORK,
     caddyContainer: config.REDNER_CADDY_CONTAINER,

@@ -9,6 +9,7 @@ import type { DeploymentLogPublisher } from "@redner/queue";
 
 export interface DeploymentWorkItem {
   id: string;
+  status?: Deployment["status"];
   projectId: string;
   snapshotRepoUrl: string;
   snapshotBranch: string;
@@ -195,15 +196,20 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
   }
 
   async fail(deploymentId: string, reason: string): Promise<void> {
-    await this.database.deployment.update({
-      where: { id: deploymentId },
+    const updated = await this.database.deployment.updateMany({
+      where: {
+        id: deploymentId,
+        status: { notIn: ["cancelling", "cancelled", "succeeded"] },
+      },
       data: {
         status: "failed",
         failureReason: reason,
         finishedAt: new Date(),
       },
     });
-    await this.appendSystemLog(deploymentId, `Deployment failed: ${reason}`);
+    if (updated.count > 0) {
+      await this.appendSystemLog(deploymentId, `Deployment failed: ${reason}`);
+    }
   }
 }
 
@@ -221,6 +227,7 @@ function serializeLog(log: Log): DeploymentLog {
 function toWorkItem(deployment: Deployment): DeploymentWorkItem {
   return {
     id: deployment.id,
+    status: deployment.status,
     projectId: deployment.projectId,
     snapshotRepoUrl: deployment.snapshotRepoUrl,
     snapshotBranch: deployment.snapshotBranch,

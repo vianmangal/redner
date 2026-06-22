@@ -182,20 +182,20 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Reconcile project state with labeled Docker containers at worker startup
-- [ ] Mark abandoned non-terminal deployments as failed
-- [ ] Remove orphan candidate containers and expired temporary directories
-- [ ] Remove old inactive images while preserving the active image
-- [ ] Make deployment retries idempotent
-- [ ] Add clear failure reasons and action confirmation dialogs
-- [ ] Test API, worker, Redis, and Docker restart scenarios
+- [x] Reconcile project state with labeled Docker containers at worker startup
+- [x] Mark abandoned non-terminal deployments as failed
+- [x] Remove orphan candidate containers and expired temporary directories
+- [x] Remove old inactive images while preserving the active image
+- [x] Make deployment retries idempotent
+- [x] Add clear failure reasons and action confirmation dialogs
+- [x] Test API, worker, Redis, and Docker restart scenarios
 
 ### Done when
 
-- [ ] Restarting redner restores accurate runtime state
-- [ ] Retried jobs do not create duplicate active containers
-- [ ] Failed deployments leave no candidate containers or temp directories
-- [ ] Cleanup never removes active project resources
+- [x] Restarting redner restores accurate runtime state
+- [x] Retried jobs do not create duplicate active containers
+- [x] Failed deployments leave no candidate containers or temp directories
+- [x] Cleanup never removes active project resources
 
 
 ### Build

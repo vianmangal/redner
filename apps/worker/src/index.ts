@@ -30,6 +30,11 @@ export {
 } from "./deployment-cancellation.js";
 export { createProjectActionProcessor } from "./project-actions.js";
 export {
+  WorkerReconciler,
+  type ReconciliationConfig,
+  type ReconciliationResult,
+} from "./reconciler.js";
+export {
   DockerRuntimeLogCollector,
   type RuntimeLogCollector,
 } from "./runtime-logs.js";

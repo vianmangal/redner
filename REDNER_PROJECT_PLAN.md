@@ -137,7 +137,7 @@ idle | running | unhealthy | stopped
 ### Deployment status
 
 ```text
-queued | cloning | building | starting | succeeded | failed
+queued | cloning | building | starting | cancelling | cancelled | succeeded | failed
 ```
 
 A successful deployment remains `succeeded` even if its container is later
@@ -317,11 +317,17 @@ database.
 
 At worker startup, run a reconciliation pass:
 
-- Mark abandoned non-terminal deployments as failed.
+- Preserve queued deployments that still have a BullMQ job and fail lost jobs.
+- Mark abandoned in-progress deployments as failed and finish pending cancellations.
 - Inspect redner-owned containers using Docker labels.
 - Restore project runtime status from the active container state.
-- Remove orphan candidate containers and expired temporary directories.
+- Resume runtime log collection for running active containers.
+- Remove orphan candidate containers, inactive images, stale routes, and temporary directories.
 - Never delete the image or container referenced by an active deployment.
+
+Cancellation removes a queued BullMQ job immediately or signals an active worker
+through Redis Pub/Sub and an abort controller. Cleanup runs before the deployment
+becomes `cancelled`; the currently active version remains online.
 
 Use Docker labels for project ID, deployment ID, and redner ownership. Routing
 belongs in generated Caddy fragments rather than Docker labels. Do not rely on

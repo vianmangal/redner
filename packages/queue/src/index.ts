@@ -21,6 +21,7 @@ export interface DeploymentJobData {
 export interface DeploymentQueue {
   enqueue(deploymentId: string): Promise<void>;
   cancelWaiting(deploymentId: string): Promise<boolean>;
+  hasJob(deploymentId: string): Promise<boolean>;
   close(): Promise<void>;
 }
 
@@ -157,6 +158,19 @@ export class BullDeploymentQueue implements DeploymentQueue {
     }
     await job.remove();
     return true;
+  }
+
+  async hasJob(deploymentId: string): Promise<boolean> {
+    const job = await this.queue.getJob(deploymentId);
+    if (job === undefined) return false;
+    const state = await job.getState();
+    return [
+      "active",
+      "waiting",
+      "delayed",
+      "prioritized",
+      "waiting-children",
+    ].includes(state);
   }
 
   async close(): Promise<void> {

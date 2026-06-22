@@ -32,6 +32,7 @@ test("deploy API stores a snapshot before queueing one job", async (context) => 
       enqueuedDeploymentId = deploymentId;
     },
     cancelWaiting: async () => false,
+    hasJob: async () => false,
     close: async () => undefined,
   };
   const app = buildApp({ dependencies, logger: false });

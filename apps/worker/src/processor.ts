@@ -21,6 +21,11 @@ export function createDeploymentProcessor(
     if (deployment === null) {
       throw new Error(`Deployment ${job.data.deploymentId} was not found`);
     }
+    if (
+      ["succeeded", "failed", "cancelled"].includes(deployment.status ?? "")
+    ) {
+      return;
+    }
 
     const cancellation = cancellations.register(deployment.id);
     try {
