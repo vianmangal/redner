@@ -50,6 +50,7 @@ function store(overrides: Partial<WorkerDeploymentStore> = {}): WorkerDeployment
 function config(routesDir: string, healthTimeoutMs = 1_000) {
   return {
     proxyNetwork: "redner_proxy",
+    baseDomain: "localhost",
     caddyContainer: "redner-caddy",
     caddyRoutesDir: routesDir,
     healthTimeoutMs,
@@ -58,6 +59,28 @@ function config(routesDir: string, healthTimeoutMs = 1_000) {
     pidsLimit: 64,
   };
 }
+
+test("public base domains generate automatic HTTPS Caddy addresses", async () => {
+  const routesDir = await mkdtemp(join(tmpdir(), "redner-public-routes-"));
+  const process: ProcessRunner = async (_command, args) => ({
+    stdout: args[0] === "run" ? "candidate-id\n" : "",
+  });
+  const lifecycle = new DockerContainerLifecycle(
+    store(),
+    { ...config(routesDir), baseDomain: "apps.vian1.tech" },
+    process,
+  );
+
+  try {
+    await lifecycle.promote(deployment, "image:tag");
+    assert.equal(
+      await readFile(join(routesDir, "app.caddy"), "utf8"),
+      "app.apps.vian1.tech {\n  reverse_proxy redner-project-1-deployment-1:3000\n}\n",
+    );
+  } finally {
+    await rm(routesDir, { recursive: true, force: true });
+  }
+});
 
 test("database promotion failure restores the previous Caddy route", async () => {
   const routesDir = await mkdtemp(join(tmpdir(), "redner-phase6-routes-"));

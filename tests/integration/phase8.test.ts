@@ -27,6 +27,7 @@ test("two projects keep distinct stable localhost routes", async () => {
   const store = new PrismaWorkerDeploymentStore(database);
   const lifecycle = new DockerContainerLifecycle(store, {
     proxyNetwork: "redner_proxy",
+    baseDomain: "localhost",
     caddyContainer: "redner-caddy",
     caddyRoutesDir: routesDir,
     healthTimeoutMs: 20_000,

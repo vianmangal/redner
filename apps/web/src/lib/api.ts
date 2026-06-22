@@ -6,9 +6,16 @@ import type {
   Project,
 } from "@redner/shared";
 
-const apiUrl = (
+const publicApiUrl = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4000"
 ).replace(/\/$/, "");
+const internalApiUrl = (
+  process.env.REDNER_INTERNAL_API_URL ?? publicApiUrl
+).replace(/\/$/, "");
+
+function apiUrl(): string {
+  return typeof window === "undefined" ? internalApiUrl : publicApiUrl;
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -27,7 +34,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("content-type", "application/json");
   }
 
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetch(`${apiUrl()}${path}`, {
     ...init,
     cache: "no-store",
     headers,
@@ -112,7 +119,7 @@ export async function listDeploymentLogs(
 }
 
 export function deploymentLogStreamUrl(id: string, after = 0): string {
-  return `${apiUrl}/deployments/${encodeURIComponent(id)}/logs/stream?after=${after}`;
+  return `${publicApiUrl}/deployments/${encodeURIComponent(id)}/logs/stream?after=${after}`;
 }
 
 export async function runProjectAction(

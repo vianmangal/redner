@@ -35,6 +35,27 @@ export const LOG_TYPES = ["system", "build", "runtime"] as const;
 
 export type LogType = (typeof LOG_TYPES)[number];
 
+export function applicationHostname(
+  slug: string,
+  baseDomain: string,
+): string {
+  return `${slug}.${baseDomain}`;
+}
+
+export function applicationUrl(slug: string, baseDomain: string): string {
+  const protocol = baseDomain === "localhost" ? "http" : "https";
+  return `${protocol}://${applicationHostname(slug, baseDomain)}`;
+}
+
+export function caddyApplicationAddress(
+  slug: string,
+  baseDomain: string,
+): string {
+  return baseDomain === "localhost"
+    ? applicationUrl(slug, baseDomain)
+    : applicationHostname(slug, baseDomain);
+}
+
 export interface DeploymentConfigSnapshot {
   repoUrl: string;
   branch: string;

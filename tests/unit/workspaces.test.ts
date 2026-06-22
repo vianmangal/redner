@@ -5,6 +5,7 @@ import { workspace as api } from "@redner/api";
 import { workspace as database } from "@redner/database";
 import { workspace as queue } from "@redner/queue";
 import {
+  applicationUrl,
   DEPLOYMENT_STATUSES,
   PROJECT_STATUSES,
   REDNER_NAME,
@@ -34,4 +35,9 @@ test("redner workspaces and shared statuses resolve", () => {
     "succeeded",
     "failed",
   ]);
+  assert.equal(applicationUrl("todo", "localhost"), "http://todo.localhost");
+  assert.equal(
+    applicationUrl("todo", "apps.vian1.tech"),
+    "https://todo.apps.vian1.tech",
+  );
 });

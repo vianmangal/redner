@@ -1,0 +1,16 @@
+[Unit]
+Description=redner web dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/redner
+EnvironmentFile=/home/ubuntu/redner/.env
+ExecStart=/usr/bin/npm run start --workspace @redner/web
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

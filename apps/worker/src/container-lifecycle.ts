@@ -1,12 +1,18 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import {
+  applicationHostname,
+  caddyApplicationAddress,
+} from "@redner/shared";
+
 import type { DeploymentWorkItem, WorkerDeploymentStore } from "./deployment-store.js";
 import { runProcess, type ProcessRunner } from "./process-runner.js";
 import type { RuntimeLogCollector } from "./runtime-logs.js";
 
 export interface ContainerConfig {
   proxyNetwork: string;
+  baseDomain: string;
   caddyContainer: string;
   caddyRoutesDir: string;
   healthTimeoutMs: number;
@@ -75,7 +81,15 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       routePath = join(this.config.caddyRoutesDir, `${deployment.snapshotSlug}.caddy`);
       const temporaryPath = `${routePath}.${deployment.id}.tmp`;
       previousRoute = await readFile(routePath, "utf8").catch(() => null);
-      const route = `http://${deployment.snapshotSlug}.localhost {\n  reverse_proxy ${name}:${deployment.snapshotAppPort}\n}\n`;
+      const hostname = applicationHostname(
+        deployment.snapshotSlug,
+        this.config.baseDomain,
+      );
+      const address = caddyApplicationAddress(
+        deployment.snapshotSlug,
+        this.config.baseDomain,
+      );
+      const route = `${address} {\n  reverse_proxy ${name}:${deployment.snapshotAppPort}\n}\n`;
       await writeFile(temporaryPath, route, { encoding: "utf8", mode: 0o644 });
       await rename(temporaryPath, routePath);
       routeChanged = true;
@@ -91,7 +105,7 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       promoted = true;
       await this.deployments.appendSystemLog(
         deployment.id,
-        `Promoted ${name} at ${deployment.snapshotSlug}.localhost`,
+        `Promoted ${name} at ${hostname}`,
       ).catch(() => undefined);
       if (previousContainer !== null && previousContainer !== containerId) {
         await this.process(

@@ -6,6 +6,7 @@ import { CancelDeploymentButton } from "@/components/cancel-deployment-button";
 import type { DeploymentStatus } from "@redner/shared";
 
 import { ApiClientError, getProject, listDeployments } from "@/lib/api";
+import { projectUrl } from "@/lib/application-url";
 
 import { DeleteProjectButton } from "./delete-project-button";
 import { DeployProjectButton } from "./deploy-project-button";
@@ -39,6 +40,7 @@ export default async function ProjectPage({
       deployment.status,
     ),
   );
+  const applicationUrl = projectUrl(project.slug);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -87,12 +89,12 @@ export default async function ProjectPage({
           </dt>
           <dd className="mt-2 text-sm">
             <a
-              href={`http://${project.slug}.localhost`}
+              href={applicationUrl}
               target="_blank"
               rel="noreferrer"
               className="font-mono text-accent hover:text-accent-dark"
             >
-              http://{project.slug}.localhost
+              {applicationUrl}
             </a>
           </dd>
         </div>

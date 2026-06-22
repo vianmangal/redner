@@ -40,6 +40,7 @@ test("healthy candidate is routed and promoted through Caddy", async () => {
     const store = new PrismaWorkerDeploymentStore(database);
     const lifecycle = new DockerContainerLifecycle(store, {
       proxyNetwork: "redner_proxy", caddyContainer: "redner-caddy",
+      baseDomain: "localhost",
       caddyRoutesDir: join(process.cwd(), "data/caddy/routes"), healthTimeoutMs: 20_000,
       memoryLimit: "128m", cpuLimit: "0.5", pidsLimit: 64,
     });

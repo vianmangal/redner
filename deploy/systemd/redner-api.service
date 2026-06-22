@@ -1,0 +1,17 @@
+[Unit]
+Description=redner API
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/redner
+EnvironmentFile=/home/ubuntu/redner/.env
+ExecStart=/usr/bin/npm run start --workspace @redner/api
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -42,10 +42,16 @@ services:
     image: caddy:2-alpine
     container_name: redner-caddy
     ports:
-      - "127.0.0.1:${CADDY_HTTP_PORT:-80}:80"
-      - "127.0.0.1:${CADDY_HTTPS_PORT:-443}:443"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTPS_PORT:-443}:443"
+    environment:
+      REDNER_DASHBOARD_DOMAIN: ${REDNER_DASHBOARD_DOMAIN:-localhost}
+      REDNER_ADMIN_USER: ${REDNER_ADMIN_USER:-admin}
+      REDNER_ADMIN_PASSWORD_HASH: ${REDNER_ADMIN_PASSWORD_HASH:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CADDYFILE_PATH:-./Caddyfile}:/etc/caddy/Caddyfile:ro
       - ./data/caddy/routes:/etc/caddy/routes:ro
       - caddy_data:/data
       - caddy_config:/config
@@ -56,10 +62,9 @@ services:
         [
           "CMD",
           "wget",
-          "--no-verbose",
-          "--tries=1",
+          "--quiet",
           "--spider",
-          "http://127.0.0.1/healthz",
+          "http://127.0.0.1:2019/config/",
         ]
       interval: 5s
       timeout: 3s

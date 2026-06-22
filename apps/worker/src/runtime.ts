@@ -73,6 +73,7 @@ export async function createWorkerRuntime(
     });
   const containers = new DockerContainerLifecycle(deployments, {
     proxyNetwork: config.REDNER_PROXY_NETWORK,
+    baseDomain: config.REDNER_BASE_DOMAIN,
     caddyContainer: config.REDNER_CADDY_CONTAINER,
     caddyRoutesDir: config.REDNER_CADDY_ROUTES_DIR,
     healthTimeoutMs: config.HEALTH_TIMEOUT_MS,

@@ -26,6 +26,7 @@ startup reconciliation restores runtime state and removes abandoned resources.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)
+- [Single-VPS deployment](./DEPLOYMENT.md)
 
 ## MVP
 

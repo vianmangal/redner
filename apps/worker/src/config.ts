@@ -32,6 +32,15 @@ const environmentSchema = z.object({
   MAX_LOG_LINE_LENGTH: z.coerce.number().int().min(80).default(4_000),
   MAX_RETAINED_LOG_LINES: z.coerce.number().int().min(100).default(5_000),
   REDNER_PROXY_NETWORK: z.string().min(1).default("redner_proxy"),
+  REDNER_BASE_DOMAIN: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^(?:localhost|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)$/,
+      "REDNER_BASE_DOMAIN must be localhost or a valid domain",
+    )
+    .default("localhost"),
   REDNER_CADDY_CONTAINER: z.string().min(1).default("redner-caddy"),
   REDNER_CADDY_ROUTES_DIR: z.string().min(1).default("./data/caddy/routes"),
   HEALTH_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(60_000),

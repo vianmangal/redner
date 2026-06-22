@@ -1,6 +1,8 @@
 import type { Project } from "@redner/shared";
 import Link from "next/link";
 
+import { projectHostname } from "@/lib/application-url";
+
 import { StatusBadge } from "./status-badge";
 
 export function ProjectCard({ project }: { project: Project }) {
@@ -15,7 +17,7 @@ export function ProjectCard({ project }: { project: Project }) {
             {project.name}
           </h2>
           <p className="mt-1 truncate font-mono text-xs text-muted">
-            {project.slug}.localhost
+            {projectHostname(project.slug)}
           </p>
         </div>
         <StatusBadge status={project.status} />

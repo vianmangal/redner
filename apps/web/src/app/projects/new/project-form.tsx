@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 import { ApiClientError, createProject } from "@/lib/api";
+import { applicationBaseDomain } from "@/lib/application-url";
 
 const initialForm = {
   name: "",
@@ -119,7 +120,7 @@ export function ProjectForm() {
             className="min-w-0 flex-1 rounded-l-2xl bg-transparent px-4 py-3 text-sm outline-none placeholder:text-slate-400"
           />
           <span className="flex items-center border-l border-white/70 bg-white/30 px-3 text-xs font-medium text-muted">
-            .localhost
+            .{applicationBaseDomain}
           </span>
         </div>
       </Field>
