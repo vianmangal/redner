@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApiClientError, getDeployment, listDeploymentLogs } from "@/lib/api";
+import { CancelDeploymentButton } from "@/components/cancel-deployment-button";
 
 import { LogViewer } from "./log-viewer";
 
@@ -44,9 +45,14 @@ export default async function DeploymentPage({
           </h1>
           <p className="mt-2 font-mono text-xs text-muted">{deployment.id}</p>
         </div>
-        <div className="glass-panel rounded-2xl px-4 py-3 text-sm">
-          <span className="text-muted">Status </span>
-          <strong className="capitalize text-ink">{deployment.status}</strong>
+        <div className="flex items-end gap-3">
+          {["queued", "cloning", "building", "starting", "cancelling"].includes(
+            deployment.status,
+          ) && <CancelDeploymentButton id={deployment.id} />}
+          <div className="glass-panel rounded-2xl px-4 py-3 text-sm">
+            <span className="text-muted">Status </span>
+            <strong className="capitalize text-ink">{deployment.status}</strong>
+          </div>
         </div>
       </div>
       {deployment.failureReason !== null && (

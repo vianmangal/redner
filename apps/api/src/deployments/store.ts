@@ -7,17 +7,31 @@ import {
 import type { DeploymentLogPublisher } from "@redner/queue";
 import type { Deployment, DeploymentLog } from "@redner/shared";
 
-const activeStatuses = ["queued", "cloning", "building", "starting"] as const;
+const activeStatuses = [
+  "queued",
+  "cloning",
+  "building",
+  "starting",
+  "cancelling",
+] as const;
+const cancellableStatuses = ["queued", "cloning", "building", "starting"] as const;
 
 export type CreateDeploymentResult =
   | { kind: "created"; deployment: Deployment }
   | { kind: "not_found" }
   | { kind: "conflict" };
 
+export type CancelDeploymentResult =
+  | { kind: "requested" }
+  | { kind: "not_found" }
+  | { kind: "not_active" };
+
 export interface DeploymentStore {
   createQueued(projectId: string): Promise<CreateDeploymentResult>;
   listForProject(projectId: string): Promise<Deployment[] | null>;
   findById(deploymentId: string): Promise<Deployment | null>;
+  requestCancellation(deploymentId: string): Promise<CancelDeploymentResult>;
+  markCancelled(deploymentId: string): Promise<void>;
   fail(deploymentId: string, reason: string): Promise<void>;
 }
 
@@ -115,6 +129,81 @@ export class PrismaDeploymentStore implements DeploymentStore {
       where: { id: deploymentId },
     });
     return deployment === null ? null : serializeDeployment(deployment);
+  }
+
+  async requestCancellation(
+    deploymentId: string,
+  ): Promise<CancelDeploymentResult> {
+    const result = await this.database.$transaction(async (transaction) => {
+      const deployment = await transaction.deployment.findUnique({
+        where: { id: deploymentId },
+        select: { status: true },
+      });
+      if (deployment === null) return { kind: "not_found" } as const;
+      if (deployment.status === "cancelling") {
+        return { kind: "requested", log: null } as const;
+      }
+      if (!cancellableStatuses.includes(deployment.status as typeof cancellableStatuses[number])) {
+        return { kind: "not_active" } as const;
+      }
+
+      const latestLog = await transaction.log.findFirst({
+        where: { deploymentId },
+        orderBy: { sequence: "desc" },
+        select: { sequence: true },
+      });
+      await transaction.deployment.update({
+        where: { id: deploymentId },
+        data: { status: "cancelling", failureReason: null },
+      });
+      const log = await transaction.log.create({
+        data: {
+          deploymentId,
+          sequence: (latestLog?.sequence ?? 0) + 1,
+          type: "system",
+          message: "Cancellation requested",
+        },
+      });
+      return { kind: "requested", log } as const;
+    });
+    if (result.kind === "requested" && result.log !== null) {
+      await this.publisher?.publish(serializeLog(result.log)).catch(() => undefined);
+    }
+    return { kind: result.kind };
+  }
+
+  async markCancelled(deploymentId: string): Promise<void> {
+    const log = await this.database.$transaction(async (transaction) => {
+      const deployment = await transaction.deployment.findUnique({
+        where: { id: deploymentId },
+        select: { status: true },
+      });
+      if (deployment?.status !== "cancelling") return null;
+      const latestLog = await transaction.log.findFirst({
+        where: { deploymentId },
+        orderBy: { sequence: "desc" },
+        select: { sequence: true },
+      });
+      await transaction.deployment.update({
+        where: { id: deploymentId },
+        data: {
+          status: "cancelled",
+          failureReason: null,
+          finishedAt: new Date(),
+        },
+      });
+      return transaction.log.create({
+        data: {
+          deploymentId,
+          sequence: (latestLog?.sequence ?? 0) + 1,
+          type: "system",
+          message: "Deployment cancelled",
+        },
+      });
+    });
+    if (log !== null) {
+      await this.publisher?.publish(serializeLog(log)).catch(() => undefined);
+    }
   }
 
   async fail(deploymentId: string, reason: string): Promise<void> {

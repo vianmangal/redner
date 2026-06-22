@@ -6,6 +6,7 @@ import {
   createRedisConnection,
   DEPLOYMENT_QUEUE_NAME,
   PROJECT_ACTION_QUEUE_NAME,
+  RedisDeploymentCancellationSubscriber,
   RedisDeploymentLogPublisher,
   type DeploymentJobData,
   type ProjectActionJobData,
@@ -19,6 +20,7 @@ import { createDeploymentProcessor } from "./processor.js";
 import { RedisProjectLockManager } from "./project-lock.js";
 import { createProjectActionProcessor } from "./project-actions.js";
 import { DockerRuntimeLogCollector } from "./runtime-logs.js";
+import { LocalDeploymentCancellationManager } from "./deployment-cancellation.js";
 
 export interface WorkerRuntime {
   close(): Promise<void>;
@@ -28,6 +30,16 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   const database = createDatabaseClient(config.DATABASE_URL);
   const lockConnection = createRedisConnection(config.REDIS_URL, "worker");
   const logPublisher = new RedisDeploymentLogPublisher(config.REDIS_URL);
+  const cancellationSubscriber = new RedisDeploymentCancellationSubscriber(
+    config.REDIS_URL,
+  );
+  const cancellations = new LocalDeploymentCancellationManager();
+  const cancellationSubscription = cancellationSubscriber
+    .subscribe((deploymentId) => cancellations.cancel(deploymentId))
+    .catch((error) => {
+      console.error("deployment cancellation subscriber error", error);
+      return undefined;
+    });
   const deployments = new PrismaWorkerDeploymentStore(
     database,
     logPublisher,
@@ -60,7 +72,7 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   );
   const worker = new Worker<DeploymentJobData>(
     DEPLOYMENT_QUEUE_NAME,
-    createDeploymentProcessor(deployments, locks, executor),
+    createDeploymentProcessor(deployments, locks, executor, cancellations),
     {
       connection: createBullConnectionOptions(config.REDIS_URL, "worker"),
       concurrency: config.WORKER_CONCURRENCY,
@@ -96,6 +108,9 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
     close: async () => {
       await worker.close();
       await actionWorker.close();
+      const unsubscribeCancellation = await cancellationSubscription;
+      await unsubscribeCancellation?.();
+      await cancellationSubscriber.close();
       await runtimeLogs.close();
       await logPublisher.close();
       if (lockConnection.status !== "end") {

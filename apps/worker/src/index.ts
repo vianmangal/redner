@@ -23,6 +23,11 @@ export {
   type WorkerDeploymentStore,
 } from "./deployment-store.js";
 export { createDeploymentProcessor } from "./processor.js";
+export {
+  LocalDeploymentCancellationManager,
+  type DeploymentCancellationHandle,
+  type DeploymentCancellationManager,
+} from "./deployment-cancellation.js";
 export { createProjectActionProcessor } from "./project-actions.js";
 export {
   DockerRuntimeLogCollector,

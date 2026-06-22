@@ -9,7 +9,9 @@ import {
   createRedisConnection,
   RedisDeploymentLogSubscriber,
   RedisDeploymentLogPublisher,
+  RedisDeploymentCancellationPublisher,
   type DeploymentLogSubscriber,
+  type DeploymentCancellationPublisher,
   type DeploymentQueue,
   type ProjectActionQueue,
 } from "@redner/queue";
@@ -33,6 +35,7 @@ export interface AppDependencies {
   projectActionQueue: ProjectActionQueue;
   logs: DeploymentLogStore;
   logSubscriber: DeploymentLogSubscriber;
+  cancellationPublisher: DeploymentCancellationPublisher;
   close: () => Promise<void>;
 }
 
@@ -53,6 +56,9 @@ export function createDependencies(config: ApiConfig): AppDependencies {
   const projectActionQueue = new BullProjectActionQueue(config.REDIS_URL);
   const logSubscriber = new RedisDeploymentLogSubscriber(config.REDIS_URL);
   const logPublisher = new RedisDeploymentLogPublisher(config.REDIS_URL);
+  const cancellationPublisher = new RedisDeploymentCancellationPublisher(
+    config.REDIS_URL,
+  );
 
   return {
     checks: {
@@ -65,11 +71,13 @@ export function createDependencies(config: ApiConfig): AppDependencies {
     projectActionQueue,
     logs: new PrismaDeploymentLogStore(database),
     logSubscriber,
+    cancellationPublisher,
     close: async () => {
       await deploymentQueue.close();
       await projectActionQueue.close();
       await logSubscriber.close();
       await logPublisher.close();
+      await cancellationPublisher.close();
       await database.$disconnect();
 
       if (redis.status !== "end") {

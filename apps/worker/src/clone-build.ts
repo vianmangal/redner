@@ -21,7 +21,7 @@ export interface CloneBuildConfig {
 }
 
 export interface DeploymentExecutor {
-  execute(deployment: DeploymentWorkItem): Promise<void>;
+  execute(deployment: DeploymentWorkItem, signal?: AbortSignal): Promise<void>;
 }
 
 export class CloneBuildExecutor implements DeploymentExecutor {
@@ -32,7 +32,8 @@ export class CloneBuildExecutor implements DeploymentExecutor {
     private readonly containers?: ContainerLifecycle,
   ) {}
 
-  async execute(deployment: DeploymentWorkItem): Promise<void> {
+  async execute(deployment: DeploymentWorkItem, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     await mkdir(this.config.buildRoot, { recursive: true });
     const workDirectory = await mkdtemp(
       join(this.config.buildRoot, `${deployment.id}-`),
@@ -58,13 +59,13 @@ export class CloneBuildExecutor implements DeploymentExecutor {
           deployment.snapshotRepoUrl,
           workDirectory,
         ],
-        this.processOptions(deployment.id, this.config.cloneTimeoutMs),
+        this.processOptions(deployment.id, this.config.cloneTimeoutMs, undefined, signal),
       );
 
       const commit = await this.process(
         "git",
         ["-C", workDirectory, "rev-parse", "HEAD"],
-        this.processOptions(deployment.id, this.config.cloneTimeoutMs),
+        this.processOptions(deployment.id, this.config.cloneTimeoutMs, undefined, signal),
       );
       const commitHash = commit.stdout.trim();
       if (!/^[0-9a-f]{40}$/i.test(commitHash)) {
@@ -94,13 +95,14 @@ export class CloneBuildExecutor implements DeploymentExecutor {
           deployment.id,
           this.config.buildTimeoutMs,
           workDirectory,
+          signal,
         ),
       );
       await this.deployments.appendSystemLog(
         deployment.id,
         "Image build complete",
       );
-      await this.containers?.promote(deployment, imageName);
+      await this.containers?.promote(deployment, imageName, signal);
     } finally {
       await rm(workDirectory, { recursive: true, force: true });
     }
@@ -110,9 +112,11 @@ export class CloneBuildExecutor implements DeploymentExecutor {
     deploymentId: string,
     timeoutMs: number,
     cwd?: string,
+    signal?: AbortSignal,
   ): RunProcessOptions {
     return {
       ...(cwd !== undefined ? { cwd } : {}),
+      ...(signal !== undefined ? { signal } : {}),
       timeoutMs,
       maxLines: this.config.maxLogLines,
       maxLineLength: this.config.maxLogLineLength,

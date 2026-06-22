@@ -81,6 +81,12 @@ export async function deployProject(id: string): Promise<Deployment> {
   return response.deployment;
 }
 
+export async function cancelDeployment(id: string): Promise<void> {
+  await request(`/deployments/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+  });
+}
+
 export async function listDeployments(id: string): Promise<Deployment[]> {
   const response = await request<{ deployments: Deployment[] }>(
     `/projects/${encodeURIComponent(id)}/deployments`,

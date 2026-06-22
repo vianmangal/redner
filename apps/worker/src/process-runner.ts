@@ -10,6 +10,7 @@ export interface RunProcessOptions {
   timeoutMs: number;
   maxLines: number;
   maxLineLength: number;
+  signal?: AbortSignal;
   onLine?: (line: ProcessOutputLine) => Promise<void>;
 }
 
@@ -20,7 +21,11 @@ export interface ProcessResult {
 export type ProcessRunner = typeof runProcess;
 
 export class ProcessExecutionError extends Error {
-  constructor(message: string, readonly timedOut = false) {
+  constructor(
+    message: string,
+    readonly timedOut = false,
+    readonly cancelled = false,
+  ) {
     super(message);
     this.name = "ProcessExecutionError";
   }
@@ -32,6 +37,10 @@ export async function runProcess(
   options: RunProcessOptions,
 ): Promise<ProcessResult> {
   return new Promise((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(new ProcessExecutionError(`${command} was cancelled`, false, true));
+      return;
+    }
     const child = spawn(command, args, {
       cwd: options.cwd,
       shell: false,
@@ -43,6 +52,7 @@ export async function runProcess(
     let lineCount = 0;
     let outputTruncated = false;
     let timedOut = false;
+    let cancelled = false;
     let loggingError: unknown;
     let logChain = Promise.resolve();
 
@@ -98,18 +108,29 @@ export async function runProcess(
     }, options.timeoutMs);
     timeout.unref();
 
+    const cancel = () => {
+      cancelled = true;
+      child.kill("SIGTERM");
+      setTimeout(() => child.kill("SIGKILL"), 2_000).unref();
+    };
+    options.signal?.addEventListener("abort", cancel, { once: true });
+
     child.once("error", (error) => {
       clearTimeout(timeout);
+      options.signal?.removeEventListener("abort", cancel);
       reject(new ProcessExecutionError(`Could not start ${command}: ${error.message}`));
     });
 
     child.once("close", (code, signal) => {
       clearTimeout(timeout);
+      options.signal?.removeEventListener("abort", cancel);
       queueLine("stdout", stdoutBuffer);
       queueLine("stderr", stderrBuffer);
       void logChain.then(() => {
         if (loggingError !== undefined) {
           reject(loggingError);
+        } else if (cancelled) {
+          reject(new ProcessExecutionError(`${command} was cancelled`, false, true));
         } else if (timedOut) {
           reject(
             new ProcessExecutionError(

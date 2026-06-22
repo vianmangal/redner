@@ -10,6 +10,7 @@ import {
   type ProjectStore,
 } from "@redner/api";
 import type {
+  DeploymentCancellationPublisher,
   DeploymentLogSubscriber,
   DeploymentQueue,
   ProjectActionQueue,
@@ -79,6 +80,8 @@ function deploymentStore(
     }),
     listForProject: async () => [],
     findById: async () => null,
+    requestCancellation: async () => ({ kind: "not_active" }),
+    markCancelled: async () => undefined,
     fail: async () => undefined,
     ...overrides,
   };
@@ -116,6 +119,7 @@ function deploymentQueue(
 ): DeploymentQueue {
   return {
     enqueue: async () => undefined,
+    cancelWaiting: async () => false,
     close: async () => undefined,
     ...overrides,
   };
@@ -128,6 +132,10 @@ function dependencies(
   queue: DeploymentQueue = deploymentQueue(),
   projectActionQueue: ProjectActionQueue = {
     enqueue: async () => undefined,
+    close: async () => undefined,
+  },
+  cancellationPublisher: DeploymentCancellationPublisher = {
+    publish: async () => undefined,
     close: async () => undefined,
   },
 ): AppDependencies {
@@ -143,6 +151,7 @@ function dependencies(
     projectActionQueue,
     logs: logStore(),
     logSubscriber: logSubscriber(),
+    cancellationPublisher,
     close: async () => undefined,
   };
 }
@@ -496,4 +505,114 @@ test("logs return not found for an unknown deployment", async (context) => {
 
   assert.equal(response.statusCode, 404);
   assert.equal(response.json().error.code, "DEPLOYMENT_NOT_FOUND");
+});
+
+test("cancel removes a queued deployment and finalizes it immediately", async (context) => {
+  const calls: string[] = [];
+  const deployments = deploymentStore({
+    requestCancellation: async () => {
+      calls.push("requested");
+      return { kind: "requested" };
+    },
+    markCancelled: async () => {
+      calls.push("cancelled");
+    },
+  });
+  const queue = deploymentQueue({
+    cancelWaiting: async () => {
+      calls.push("removed");
+      return true;
+    },
+  });
+  const cancellationPublisher: DeploymentCancellationPublisher = {
+    publish: async (id) => {
+      calls.push(`signalled:${id}`);
+    },
+    close: async () => undefined,
+  };
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore(),
+      deployments,
+      queue,
+      undefined,
+      cancellationPublisher,
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/deployments/deployment-1/cancel",
+  });
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(response.json().status, "cancelled");
+  assert.deepEqual(calls, [
+    "requested",
+    "removed",
+    "signalled:deployment-1",
+    "cancelled",
+  ]);
+});
+
+test("cancel signals an active deployment without marking it failed", async (context) => {
+  let signalled = false;
+  let finalized = false;
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore(),
+      deploymentStore({
+        requestCancellation: async () => ({ kind: "requested" }),
+        markCancelled: async () => {
+          finalized = true;
+        },
+      }),
+      deploymentQueue({ cancelWaiting: async () => false }),
+      undefined,
+      {
+        publish: async () => {
+          signalled = true;
+        },
+        close: async () => undefined,
+      },
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/deployments/deployment-1/cancel",
+  });
+
+  assert.equal(response.statusCode, 202);
+  assert.equal(response.json().status, "cancelling");
+  assert.equal(signalled, true);
+  assert.equal(finalized, false);
+});
+
+test("cancel rejects terminal deployments", async (context) => {
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore(),
+      deploymentStore({
+        requestCancellation: async () => ({ kind: "not_active" }),
+      }),
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/deployments/deployment-1/cancel",
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error.code, "DEPLOYMENT_NOT_ACTIVE");
 });

@@ -12,6 +12,7 @@ export const DEPLOYMENT_QUEUE_NAME = "redner-deployments";
 export const DEPLOYMENT_JOB_NAME = "deploy";
 export const PROJECT_ACTION_QUEUE_NAME = "redner-project-actions";
 const DEPLOYMENT_LOG_CHANNEL_PREFIX = "redner:deployment-logs:";
+const DEPLOYMENT_CANCELLATION_CHANNEL = "redner:deployment-cancellations";
 
 export interface DeploymentJobData {
   deploymentId: string;
@@ -19,6 +20,19 @@ export interface DeploymentJobData {
 
 export interface DeploymentQueue {
   enqueue(deploymentId: string): Promise<void>;
+  cancelWaiting(deploymentId: string): Promise<boolean>;
+  close(): Promise<void>;
+}
+
+export interface DeploymentCancellationPublisher {
+  publish(deploymentId: string): Promise<void>;
+  close(): Promise<void>;
+}
+
+export type DeploymentCancellationListener = (deploymentId: string) => void;
+
+export interface DeploymentCancellationSubscriber {
+  subscribe(listener: DeploymentCancellationListener): Promise<() => Promise<void>>;
   close(): Promise<void>;
 }
 
@@ -134,6 +148,17 @@ export class BullDeploymentQueue implements DeploymentQueue {
     );
   }
 
+  async cancelWaiting(deploymentId: string): Promise<boolean> {
+    const job = await this.queue.getJob(deploymentId);
+    if (job === undefined) return false;
+    const state = await job.getState();
+    if (!["waiting", "delayed", "prioritized", "waiting-children"].includes(state)) {
+      return false;
+    }
+    await job.remove();
+    return true;
+  }
+
   async close(): Promise<void> {
     await this.queue.close();
   }
@@ -229,6 +254,60 @@ export class RedisDeploymentLogSubscriber implements DeploymentLogSubscriber {
 
   async close(): Promise<void> {
     this.listeners.clear();
+    if (this.redis.status !== "end") this.redis.disconnect();
+  }
+}
+
+export class RedisDeploymentCancellationPublisher
+  implements DeploymentCancellationPublisher
+{
+  private readonly redis: Redis;
+
+  constructor(redisUrl: string) {
+    this.redis = createRedisConnection(redisUrl, "worker");
+  }
+
+  async publish(deploymentId: string): Promise<void> {
+    await this.redis.publish(DEPLOYMENT_CANCELLATION_CHANNEL, deploymentId);
+  }
+
+  async close(): Promise<void> {
+    if (this.redis.status !== "end") this.redis.disconnect();
+  }
+}
+
+export class RedisDeploymentCancellationSubscriber
+  implements DeploymentCancellationSubscriber
+{
+  private readonly redis: Redis;
+
+  constructor(redisUrl: string) {
+    this.redis = createRedisConnection(redisUrl, "worker");
+  }
+
+  async subscribe(
+    listener: DeploymentCancellationListener,
+  ): Promise<() => Promise<void>> {
+    const onMessage = (channel: string, deploymentId: string) => {
+      if (channel === DEPLOYMENT_CANCELLATION_CHANNEL) listener(deploymentId);
+    };
+    this.redis.on("message", onMessage);
+    try {
+      await this.redis.subscribe(DEPLOYMENT_CANCELLATION_CHANNEL);
+    } catch (error) {
+      this.redis.off("message", onMessage);
+      throw error;
+    }
+
+    return async () => {
+      this.redis.off("message", onMessage);
+      if (this.redis.status !== "end") {
+        await this.redis.unsubscribe(DEPLOYMENT_CANCELLATION_CHANNEL);
+      }
+    };
+  }
+
+  async close(): Promise<void> {
     if (this.redis.status !== "end") this.redis.disconnect();
   }
 }

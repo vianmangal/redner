@@ -32,6 +32,8 @@ function deploymentStore() {
     markBuilding: async (_id, commit, image) =>
       events.push(`status:building:${commit}:${image}`),
     markStarting: async () => undefined,
+    isCancellationRequested: async () => false,
+    markCancelled: async () => undefined,
     promote: async () => null,
     fail: async () => undefined,
   };
@@ -164,5 +166,26 @@ test("process runner terminates commands at the configured timeout", async () =>
     }),
     (error) =>
       error instanceof ProcessExecutionError && error.timedOut,
+  );
+});
+
+test("process runner terminates commands when cancellation is requested", async () => {
+  const controller = new AbortController();
+  const running = runProcess(
+    process.execPath,
+    ["-e", "setTimeout(() => {}, 10000)"],
+    {
+      timeoutMs: 10_000,
+      maxLines: 10,
+      maxLineLength: 100,
+      signal: controller.signal,
+    },
+  );
+  setTimeout(() => controller.abort(), 20);
+
+  await assert.rejects(
+    running,
+    (error) =>
+      error instanceof ProcessExecutionError && error.cancelled && !error.timedOut,
   );
 });

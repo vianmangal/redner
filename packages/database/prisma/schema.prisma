@@ -20,6 +20,8 @@ enum DeploymentStatus {
   cloning
   building
   starting
+  cancelling
+  cancelled
   succeeded
   failed
 }

@@ -39,6 +39,8 @@ function store(overrides: Partial<WorkerDeploymentStore> = {}): WorkerDeployment
     markCloning: async () => undefined,
     markBuilding: async () => undefined,
     markStarting: async () => undefined,
+    isCancellationRequested: async () => false,
+    markCancelled: async () => undefined,
     promote: async () => null,
     fail: async () => undefined,
     ...overrides,

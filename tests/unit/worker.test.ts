@@ -6,6 +6,7 @@ import type { Job } from "bullmq";
 import type { DeploymentJobData } from "@redner/queue";
 import {
   createDeploymentProcessor,
+  LocalDeploymentCancellationManager,
   type DeploymentExecutor,
   type ProjectLockManager,
   type WorkerDeploymentStore,
@@ -35,6 +36,8 @@ function store(overrides: Partial<WorkerDeploymentStore> = {}) {
     markCloning: async () => undefined,
     markBuilding: async () => undefined,
     markStarting: async () => undefined,
+    isCancellationRequested: async () => false,
+    markCancelled: async () => undefined,
     promote: async () => null,
     fail: async (_id, reason) => {
       failure = reason;
@@ -126,4 +129,52 @@ test("worker records a final clone/build failure and releases the lock", async (
     deployments.getFailure(),
     "Repository must contain a root Dockerfile",
   );
+});
+
+test("worker aborts active execution and marks the deployment cancelled", async () => {
+  let markedCancelled = false;
+  const deployments = store({
+    markCancelled: async () => {
+      markedCancelled = true;
+    },
+  });
+  let released = false;
+  const locks: ProjectLockManager = {
+    acquire: async () => ({
+      release: async () => {
+        released = true;
+      },
+    }),
+  };
+  const cancellations = new LocalDeploymentCancellationManager();
+  let executionStarted: (() => void) | undefined;
+  const started = new Promise<void>((resolve) => {
+    executionStarted = resolve;
+  });
+  const executor: DeploymentExecutor = {
+    execute: async (_deployment, signal) => {
+      executionStarted?.();
+      await new Promise<void>((_resolve, reject) => {
+        signal?.addEventListener(
+          "abort",
+          () => reject(new Error("cancelled")),
+          { once: true },
+        );
+      });
+    },
+  };
+
+  const processing = createDeploymentProcessor(
+    deployments.value,
+    locks,
+    executor,
+    cancellations,
+  )(job());
+  await started;
+  assert.equal(cancellations.cancel("deployment-1"), true);
+  await processing;
+
+  assert.equal(markedCancelled, true);
+  assert.equal(released, true);
+  assert.equal(deployments.getFailure(), undefined);
 });

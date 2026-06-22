@@ -16,7 +16,11 @@ export interface ContainerConfig {
 }
 
 export interface ContainerLifecycle {
-  promote(deployment: DeploymentWorkItem, imageName: string): Promise<void>;
+  promote(
+    deployment: DeploymentWorkItem,
+    imageName: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 
 export class DockerContainerLifecycle implements ContainerLifecycle {
@@ -27,7 +31,12 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
     private readonly runtimeLogs?: RuntimeLogCollector,
   ) {}
 
-  async promote(deployment: DeploymentWorkItem, imageName: string): Promise<void> {
+  async promote(
+    deployment: DeploymentWorkItem,
+    imageName: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    signal?.throwIfAborted();
     const name = `redner-${deployment.projectId}-${deployment.id}`;
     let promoted = false;
     let routePath: string | undefined;
@@ -54,12 +63,13 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
           "--restart", "no",
           imageName,
         ],
-        this.options(60_000),
+        this.options(60_000, signal),
       );
       const containerId = started.stdout.trim();
       await this.deployments.markStarting(deployment.id, containerId);
       await this.deployments.appendSystemLog(deployment.id, `Started candidate container ${name}`);
-      await this.checkHealth(name, deployment.snapshotAppPort);
+      await this.checkHealth(name, deployment.snapshotAppPort, signal);
+      signal?.throwIfAborted();
 
       await mkdir(this.config.caddyRoutesDir, { recursive: true });
       routePath = join(this.config.caddyRoutesDir, `${deployment.snapshotSlug}.caddy`);
@@ -70,8 +80,8 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       await rename(temporaryPath, routePath);
       routeChanged = true;
 
-      await this.caddy("validate");
-      await this.caddy("reload");
+      await this.caddy("validate", signal);
+      await this.caddy("reload", signal);
 
       const previousContainer = await this.deployments.promote(
         deployment.id,
@@ -122,17 +132,19 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
     }
   }
 
-  async checkHealth(name: string, port: number): Promise<void> {
+  async checkHealth(name: string, port: number, signal?: AbortSignal): Promise<void> {
     const deadline = Date.now() + this.config.healthTimeoutMs;
     while (Date.now() < deadline) {
+      signal?.throwIfAborted();
       try {
         await this.process(
           "docker",
           ["exec", this.config.caddyContainer, "wget", "--quiet", "--spider", `http://${name}:${port}/`],
-          this.options(5_000),
+          this.options(5_000, signal),
         );
         return;
       } catch {
+        signal?.throwIfAborted();
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
@@ -149,15 +161,20 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       .catch(() => undefined);
   }
 
-  private caddy(command: "validate" | "reload") {
+  private caddy(command: "validate" | "reload", signal?: AbortSignal) {
     return this.process(
       "docker",
       ["exec", this.config.caddyContainer, "caddy", command, "--config", "/etc/caddy/Caddyfile"],
-      this.options(30_000),
+      this.options(30_000, signal),
     );
   }
 
-  private options(timeoutMs: number) {
-    return { timeoutMs, maxLines: 200, maxLineLength: 2_000 };
+  private options(timeoutMs: number, signal?: AbortSignal) {
+    return {
+      timeoutMs,
+      maxLines: 200,
+      maxLineLength: 2_000,
+      ...(signal !== undefined ? { signal } : {}),
+    };
   }
 }

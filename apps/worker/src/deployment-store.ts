@@ -28,6 +28,8 @@ export interface WorkerDeploymentStore {
     imageName: string,
   ): Promise<void>;
   markStarting(deploymentId: string, containerId: string): Promise<void>;
+  isCancellationRequested(deploymentId: string): Promise<boolean>;
+  markCancelled(deploymentId: string): Promise<void>;
   promote(
     deploymentId: string,
     projectId: string,
@@ -64,8 +66,11 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
   }
 
   async markCloning(deploymentId: string): Promise<void> {
-    await this.database.deployment.update({
-      where: { id: deploymentId },
+    const updated = await this.database.deployment.updateMany({
+      where: {
+        id: deploymentId,
+        status: { notIn: ["cancelling", "cancelled", "succeeded"] },
+      },
       data: {
         status: "cloning",
         startedAt: new Date(),
@@ -73,6 +78,7 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
         failureReason: null,
       },
     });
+    ensureDeploymentCanContinue(updated.count);
   }
 
   async markBuilding(
@@ -80,17 +86,47 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
     commitHash: string,
     imageName: string,
   ): Promise<void> {
-    await this.database.deployment.update({
-      where: { id: deploymentId },
+    const updated = await this.database.deployment.updateMany({
+      where: {
+        id: deploymentId,
+        status: { notIn: ["cancelling", "cancelled", "succeeded"] },
+      },
       data: { status: "building", commitHash, imageName },
     });
+    ensureDeploymentCanContinue(updated.count);
   }
 
   async markStarting(deploymentId: string, containerId: string): Promise<void> {
-    await this.database.deployment.update({
-      where: { id: deploymentId },
+    const updated = await this.database.deployment.updateMany({
+      where: {
+        id: deploymentId,
+        status: { notIn: ["cancelling", "cancelled", "succeeded"] },
+      },
       data: { status: "starting", containerId },
     });
+    ensureDeploymentCanContinue(updated.count);
+  }
+
+  async isCancellationRequested(deploymentId: string): Promise<boolean> {
+    const deployment = await this.database.deployment.findUnique({
+      where: { id: deploymentId },
+      select: { status: true },
+    });
+    return deployment?.status === "cancelling" || deployment?.status === "cancelled";
+  }
+
+  async markCancelled(deploymentId: string): Promise<void> {
+    const updated = await this.database.deployment.updateMany({
+      where: { id: deploymentId, status: "cancelling" },
+      data: {
+        status: "cancelled",
+        failureReason: null,
+        finishedAt: new Date(),
+      },
+    });
+    if (updated.count > 0) {
+      await this.appendSystemLog(deploymentId, "Deployment cancelled");
+    }
   }
 
   async promote(
@@ -103,10 +139,11 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
         where: { id: projectId },
         include: { activeDeployment: { select: { containerId: true } } },
       });
-      await transaction.deployment.update({
-        where: { id: deploymentId },
+      const updated = await transaction.deployment.updateMany({
+        where: { id: deploymentId, status: "starting" },
         data: { status: "succeeded", containerId, finishedAt: new Date() },
       });
+      ensureDeploymentCanContinue(updated.count);
       await transaction.project.update({
         where: { id: projectId },
         data: { activeDeploymentId: deploymentId, status: "running" },
@@ -168,6 +205,10 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
     });
     await this.appendSystemLog(deploymentId, `Deployment failed: ${reason}`);
   }
+}
+
+function ensureDeploymentCanContinue(updatedCount: number): void {
+  if (updatedCount === 0) throw new Error("Deployment cancellation requested");
 }
 
 function serializeLog(log: Log): DeploymentLog {

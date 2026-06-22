@@ -123,6 +123,7 @@ export function buildApp({
       deploymentApp,
       dependencies.deployments,
       dependencies.deploymentQueue,
+      dependencies.cancellationPublisher,
     ),
   );
   void app.register(async (actionApp) =>

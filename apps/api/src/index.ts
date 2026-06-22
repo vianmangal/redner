@@ -11,6 +11,7 @@ export { createDependencies } from "./dependencies.js";
 export { ApiError } from "./errors.js";
 export {
   PrismaDeploymentStore,
+  type CancelDeploymentResult,
   type CreateDeploymentResult,
   type DeploymentStore,
 } from "./deployments/store.js";

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/status-badge";
+import { CancelDeploymentButton } from "@/components/cancel-deployment-button";
 import type { DeploymentStatus } from "@redner/shared";
 
 import { ApiClientError, getProject, listDeployments } from "@/lib/api";
@@ -34,7 +35,7 @@ export default async function ProjectPage({
   }
 
   const activeDeployment = deployments.find((deployment) =>
-    ["queued", "cloning", "building", "starting"].includes(
+    ["queued", "cloning", "building", "starting", "cancelling"].includes(
       deployment.status,
     ),
   );
@@ -63,6 +64,9 @@ export default async function ProjectPage({
           </a>
         </div>
         <div className="flex flex-wrap items-start gap-3">
+          {activeDeployment !== undefined && (
+            <CancelDeploymentButton id={activeDeployment.id} />
+          )}
           <RuntimeActions
             id={project.id}
             status={project.status}
@@ -152,6 +156,8 @@ const deploymentColors: Record<DeploymentStatus, string> = {
   cloning: "border-violet-200 bg-violet-50 text-violet-700",
   building: "border-amber-200 bg-amber-50 text-amber-700",
   starting: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  cancelling: "border-orange-200 bg-orange-50 text-orange-700",
+  cancelled: "border-slate-200 bg-slate-50 text-slate-600",
   succeeded: "border-emerald-200 bg-emerald-50 text-emerald-700",
   failed: "border-rose-200 bg-rose-50 text-rose-700",
 };

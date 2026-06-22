@@ -29,6 +29,8 @@ test("redner workspaces and shared statuses resolve", () => {
     "cloning",
     "building",
     "starting",
+    "cancelling",
+    "cancelled",
     "succeeded",
     "failed",
   ]);

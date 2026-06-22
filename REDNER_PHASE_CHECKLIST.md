@@ -197,9 +197,6 @@ verification before moving to the next one.
 - [ ] Failed deployments leave no candidate containers or temp directories
 - [ ] Cleanup never removes active project resources
 
-## Phase 10: Optional Single-VPS Exercise
-
-Do this only after the local MVP is complete.
 
 ### Build
 

@@ -19,6 +19,8 @@ export const DEPLOYMENT_STATUSES = [
   "cloning",
   "building",
   "starting",
+  "cancelling",
+  "cancelled",
   "succeeded",
   "failed",
 ] as const;
