@@ -130,7 +130,8 @@ export default async function ProjectPage({
               <Link
                 key={deployment.id}
                 href={`/deployments/${deployment.id}`}
-                className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                aria-label={`View logs for deployment ${deployment.id}`}
+                className="group -mx-3 flex items-center justify-between gap-4 rounded-2xl px-3 py-4 transition hover:bg-white/45 first:pt-3 last:pb-3"
               >
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs text-muted">
@@ -143,7 +144,26 @@ export default async function ProjectPage({
                     }).format(new Date(deployment.createdAt))}
                   </p>
                 </div>
-                <DeploymentBadge status={deployment.status} />
+                <div className="flex shrink-0 items-center gap-3">
+                  <DeploymentBadge status={deployment.status} />
+                  <span className="hidden text-sm font-semibold text-accent sm:inline">
+                    View logs
+                  </span>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="h-5 w-5 text-accent transition-transform group-hover:translate-x-1"
+                  >
+                    <path
+                      d="M4 10h11m-4-4 4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               </Link>
             ))}
           </div>
