@@ -40,7 +40,7 @@ input {
 }
 
 .field-input {
-  @apply w-full rounded-2xl border border-white/75 bg-white/65 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.75)] outline-none backdrop-blur-xl transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white/80 focus:ring-4 focus:ring-blue-200/50;
+  @apply w-full rounded-2xl border border-white/55 bg-slate-100/55 px-4 py-3 text-sm text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.78),0_10px_30px_rgb(51_65_85/0.08)] outline-none backdrop-blur-2xl transition placeholder:text-slate-500 focus:border-blue-300/80 focus:bg-slate-50/75 focus:ring-4 focus:ring-blue-200/40;
 }
 
 .silk-background {
@@ -68,28 +68,34 @@ input {
 }
 
 .glass-panel {
-  border: 1px solid rgb(255 255 255 / 68%);
-  background: rgb(255 255 255 / 58%);
+  border: 1px solid rgb(255 255 255 / 55%);
+  background:
+    linear-gradient(145deg, rgb(241 245 249 / 62%), rgb(148 163 184 / 30%));
   box-shadow:
-    0 24px 70px rgb(38 68 148 / 14%),
-    inset 0 1px 0 rgb(255 255 255 / 82%);
-  backdrop-filter: blur(24px) saturate(135%);
+    0 24px 70px rgb(30 41 59 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 78%),
+    inset 0 -1px 0 rgb(71 85 105 / 12%);
+  backdrop-filter: blur(28px) saturate(125%);
 }
 
 .glass-panel-strong {
-  border: 1px solid rgb(255 255 255 / 78%);
-  background: rgb(255 255 255 / 68%);
+  border: 1px solid rgb(255 255 255 / 62%);
+  background:
+    linear-gradient(145deg, rgb(248 250 252 / 68%), rgb(148 163 184 / 36%));
   box-shadow:
-    0 28px 80px rgb(38 68 148 / 16%),
-    inset 0 1px 0 rgb(255 255 255 / 90%);
-  backdrop-filter: blur(30px) saturate(140%);
+    0 28px 80px rgb(30 41 59 / 21%),
+    inset 0 1px 0 rgb(255 255 255 / 86%),
+    inset 0 -1px 0 rgb(71 85 105 / 14%);
+  backdrop-filter: blur(32px) saturate(128%);
 }
 
 .glass-button {
-  border: 1px solid rgb(255 255 255 / 76%);
-  background: rgb(255 255 255 / 68%);
+  border: 1px solid rgb(255 255 255 / 60%);
+  background:
+    linear-gradient(145deg, rgb(248 250 252 / 72%), rgb(148 163 184 / 34%));
   box-shadow:
-    0 12px 30px rgb(46 79 166 / 14%),
-    inset 0 1px 0 rgb(255 255 255 / 90%);
-  backdrop-filter: blur(18px);
+    0 12px 30px rgb(30 41 59 / 16%),
+    inset 0 1px 0 rgb(255 255 255 / 86%),
+    inset 0 -1px 0 rgb(71 85 105 / 12%);
+  backdrop-filter: blur(22px) saturate(120%);
 }

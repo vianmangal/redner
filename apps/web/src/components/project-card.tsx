@@ -9,7 +9,7 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="glass-panel group block rounded-3xl p-6 transition duration-300 hover:-translate-y-1 hover:border-white/90 hover:bg-white/68 hover:shadow-[0_28px_70px_rgb(36_65_145/0.2)]"
+      className="glass-panel group block rounded-3xl p-6 transition duration-300 hover:-translate-y-1 hover:border-white/75 hover:brightness-105 hover:shadow-[0_28px_70px_rgb(30_41_59/0.24)]"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">

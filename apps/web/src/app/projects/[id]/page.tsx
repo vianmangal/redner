@@ -82,8 +82,8 @@ export default async function ProjectPage({
         </div>
       </div>
 
-      <section className="glass-panel mt-10 grid gap-px overflow-hidden rounded-[2rem] bg-white/35 sm:grid-cols-2">
-        <div className="bg-white/45 p-5 backdrop-blur-xl">
+      <section className="glass-panel mt-10 grid gap-px overflow-hidden rounded-[2rem] bg-slate-400/25 sm:grid-cols-2">
+        <div className="bg-slate-100/35 p-5 backdrop-blur-xl">
           <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Application URL
           </dt>
@@ -131,7 +131,7 @@ export default async function ProjectPage({
                 key={deployment.id}
                 href={`/deployments/${deployment.id}`}
                 aria-label={`View logs for deployment ${deployment.id}`}
-                className="group -mx-3 flex items-center justify-between gap-4 rounded-2xl px-3 py-4 transition hover:bg-white/45 first:pt-3 last:pb-3"
+                className="group -mx-3 flex items-center justify-between gap-4 rounded-2xl px-3 py-4 transition hover:bg-slate-100/40 first:pt-3 last:pb-3"
               >
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs text-muted">
@@ -204,7 +204,7 @@ function Detail({
   mono?: boolean;
 }) {
   return (
-    <div className="bg-white/45 p-5 backdrop-blur-xl">
+    <div className="bg-slate-100/35 p-5 backdrop-blur-xl">
       <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>

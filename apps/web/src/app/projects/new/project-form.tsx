@@ -106,7 +106,7 @@ export function ProjectForm() {
         hint="Used for the local hostname"
         error={fieldError("slug")}
       >
-        <div className="flex rounded-2xl border border-white/75 bg-white/65 shadow-[inset_0_1px_0_rgb(255_255_255/0.75)] backdrop-blur-xl transition focus-within:border-blue-300 focus-within:bg-white/80 focus-within:ring-4 focus-within:ring-blue-200/50">
+        <div className="flex rounded-2xl border border-white/55 bg-slate-100/55 shadow-[inset_0_1px_0_rgb(255_255_255/0.78),0_10px_30px_rgb(51_65_85/0.08)] backdrop-blur-2xl transition focus-within:border-blue-300/80 focus-within:bg-slate-50/75 focus-within:ring-4 focus-within:ring-blue-200/40">
           <input
             id="slug"
             value={form.slug}
@@ -119,7 +119,7 @@ export function ProjectForm() {
             maxLength={63}
             className="min-w-0 flex-1 rounded-l-2xl bg-transparent px-4 py-3 text-sm outline-none placeholder:text-slate-400"
           />
-          <span className="flex items-center border-l border-white/70 bg-white/30 px-3 text-xs font-medium text-muted">
+          <span className="flex items-center border-l border-white/55 bg-slate-300/25 px-3 text-xs font-medium text-muted">
             .{applicationBaseDomain}
           </span>
         </div>
