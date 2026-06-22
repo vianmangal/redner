@@ -86,3 +86,10 @@ export async function listDeployments(id: string): Promise<Deployment[]> {
   );
   return response.deployments;
 }
+
+export async function runProjectAction(
+  id: string,
+  action: "stop" | "restart",
+): Promise<void> {
+  await request(`/projects/${encodeURIComponent(id)}/${action}`, { method: "POST" });
+}

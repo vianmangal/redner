@@ -11,6 +11,7 @@ import type {
   DependencyName,
 } from "./dependencies.js";
 import { registerProjectRoutes } from "./projects/routes.js";
+import { registerProjectActionRoutes } from "./projects/actions.js";
 
 type DependencyStatus = "up" | "down";
 
@@ -121,6 +122,13 @@ export function buildApp({
       deploymentApp,
       dependencies.deployments,
       dependencies.deploymentQueue,
+    ),
+  );
+  void app.register(async (actionApp) =>
+    registerProjectActionRoutes(
+      actionApp,
+      dependencies.projects,
+      dependencies.projectActionQueue,
     ),
   );
 

@@ -23,6 +23,12 @@ export interface WorkerDeploymentStore {
     commitHash: string,
     imageName: string,
   ): Promise<void>;
+  markStarting(deploymentId: string, containerId: string): Promise<void>;
+  promote(
+    deploymentId: string,
+    projectId: string,
+    containerId: string,
+  ): Promise<string | null>;
   fail(deploymentId: string, reason: string): Promise<void>;
 }
 
@@ -64,6 +70,35 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
     await this.database.deployment.update({
       where: { id: deploymentId },
       data: { status: "building", commitHash, imageName },
+    });
+  }
+
+  async markStarting(deploymentId: string, containerId: string): Promise<void> {
+    await this.database.deployment.update({
+      where: { id: deploymentId },
+      data: { status: "starting", containerId },
+    });
+  }
+
+  async promote(
+    deploymentId: string,
+    projectId: string,
+    containerId: string,
+  ): Promise<string | null> {
+    return this.database.$transaction(async (transaction) => {
+      const project = await transaction.project.findUniqueOrThrow({
+        where: { id: projectId },
+        include: { activeDeployment: { select: { containerId: true } } },
+      });
+      await transaction.deployment.update({
+        where: { id: deploymentId },
+        data: { status: "succeeded", containerId, finishedAt: new Date() },
+      });
+      await transaction.project.update({
+        where: { id: projectId },
+        data: { activeDeploymentId: deploymentId, status: "running" },
+      });
+      return project.activeDeployment?.containerId ?? null;
     });
   }
 

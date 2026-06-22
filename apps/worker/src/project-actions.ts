@@ -1,0 +1,52 @@
+import type { Job } from "bullmq";
+import type { DatabaseClient } from "@redner/database";
+import type { ProjectActionJobData } from "@redner/queue";
+import type { DockerContainerLifecycle } from "./container-lifecycle.js";
+import type { WorkerDeploymentStore } from "./deployment-store.js";
+import type { ProjectLockManager } from "./project-lock.js";
+import { runProcess, type ProcessRunner } from "./process-runner.js";
+
+export function createProjectActionProcessor(
+  database: DatabaseClient,
+  deployments: WorkerDeploymentStore,
+  locks: ProjectLockManager,
+  containers: DockerContainerLifecycle,
+  process: ProcessRunner = runProcess,
+) {
+  return async (job: Job<ProjectActionJobData>): Promise<void> => {
+    const project = await database.project.findUnique({
+      where: { id: job.data.projectId },
+      include: { activeDeployment: true },
+    });
+    const active = project?.activeDeployment;
+    if (project === null || project === undefined || active?.containerId === null || active?.containerId === undefined) {
+      throw new Error("Project has no active container");
+    }
+    const lock = await locks.acquire(project.id);
+    if (lock === null) throw new Error("Project already has an active operation");
+    try {
+      if (job.data.action === "stop") {
+        await process("docker", ["stop", active.containerId], options());
+        await database.project.update({ where: { id: project.id }, data: { status: "stopped" } });
+        await deployments.appendSystemLog(active.id, "Project container stopped");
+      } else {
+        await process("docker", ["start", active.containerId], options());
+        const inspected = await process(
+          "docker",
+          ["inspect", "--format", "{{.Name}}", active.containerId],
+          options(),
+        );
+        const containerName = inspected.stdout.trim().replace(/^\//, "");
+        await containers.checkHealth(containerName, project.appPort);
+        await database.project.update({ where: { id: project.id }, data: { status: "running" } });
+        await deployments.appendSystemLog(active.id, "Project container restarted");
+      }
+    } finally {
+      await lock.release();
+    }
+  };
+}
+
+function options() {
+  return { timeoutMs: 60_000, maxLines: 200, maxLineLength: 2_000 };
+}

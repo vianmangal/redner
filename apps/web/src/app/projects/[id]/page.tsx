@@ -8,6 +8,7 @@ import { ApiClientError, getProject, listDeployments } from "@/lib/api";
 
 import { DeleteProjectButton } from "./delete-project-button";
 import { DeployProjectButton } from "./deploy-project-button";
+import { RuntimeActions } from "./runtime-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,11 @@ export default async function ProjectPage({
           </a>
         </div>
         <div className="flex flex-wrap items-start gap-3">
+          <RuntimeActions
+            id={project.id}
+            status={project.status}
+            hasActive={project.activeDeploymentId !== null}
+          />
           <DeployProjectButton
             id={project.id}
             disabled={activeDeployment !== undefined}

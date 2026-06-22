@@ -5,6 +5,7 @@ import type {
   DeploymentWorkItem,
   WorkerDeploymentStore,
 } from "./deployment-store.js";
+import type { ContainerLifecycle } from "./container-lifecycle.js";
 import {
   runProcess,
   type ProcessRunner,
@@ -28,6 +29,7 @@ export class CloneBuildExecutor implements DeploymentExecutor {
     private readonly deployments: WorkerDeploymentStore,
     private readonly config: CloneBuildConfig,
     private readonly process: ProcessRunner = runProcess,
+    private readonly containers?: ContainerLifecycle,
   ) {}
 
   async execute(deployment: DeploymentWorkItem): Promise<void> {
@@ -96,8 +98,9 @@ export class CloneBuildExecutor implements DeploymentExecutor {
       );
       await this.deployments.appendSystemLog(
         deployment.id,
-        "Image build complete; container startup continues in Phase 6",
+        "Image build complete",
       );
+      await this.containers?.promote(deployment, imageName);
     } finally {
       await rm(workDirectory, { recursive: true, force: true });
     }

@@ -5,8 +5,10 @@ import {
 } from "@redner/database";
 import {
   BullDeploymentQueue,
+  BullProjectActionQueue,
   createRedisConnection,
   type DeploymentQueue,
+  type ProjectActionQueue,
 } from "@redner/queue";
 
 import type { ApiConfig } from "./config.js";
@@ -24,6 +26,7 @@ export interface AppDependencies {
   projects: ProjectStore;
   deployments: DeploymentStore;
   deploymentQueue: DeploymentQueue;
+  projectActionQueue: ProjectActionQueue;
   close: () => Promise<void>;
 }
 
@@ -41,6 +44,7 @@ export function createDependencies(config: ApiConfig): AppDependencies {
   const database: DatabaseClient = createDatabaseClient(config.DATABASE_URL);
   const redis = createRedisConnection(config.REDIS_URL);
   const deploymentQueue = new BullDeploymentQueue(config.REDIS_URL);
+  const projectActionQueue = new BullProjectActionQueue(config.REDIS_URL);
 
   return {
     checks: {
@@ -50,8 +54,10 @@ export function createDependencies(config: ApiConfig): AppDependencies {
     projects: new PrismaProjectStore(database),
     deployments: new PrismaDeploymentStore(database),
     deploymentQueue,
+    projectActionQueue,
     close: async () => {
       await deploymentQueue.close();
+      await projectActionQueue.close();
       await database.$disconnect();
 
       if (redis.status !== "end") {

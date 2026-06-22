@@ -30,6 +30,8 @@ function deploymentStore() {
     markCloning: async () => events.push("status:cloning"),
     markBuilding: async (_id, commit, image) =>
       events.push(`status:building:${commit}:${image}`),
+    markStarting: async () => undefined,
+    promote: async () => null,
     fail: async () => undefined,
   };
   return { value, events };

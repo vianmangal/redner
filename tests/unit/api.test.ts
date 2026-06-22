@@ -8,7 +8,7 @@ import {
   type DeploymentStore,
   type ProjectStore,
 } from "@redner/api";
-import type { DeploymentQueue } from "@redner/queue";
+import type { DeploymentQueue, ProjectActionQueue } from "@redner/queue";
 import type {
   CreateProjectInput,
   Deployment,
@@ -92,6 +92,10 @@ function dependencies(
   projects: ProjectStore = projectStore(),
   deployments: DeploymentStore = deploymentStore(),
   queue: DeploymentQueue = deploymentQueue(),
+  projectActionQueue: ProjectActionQueue = {
+    enqueue: async () => undefined,
+    close: async () => undefined,
+  },
 ): AppDependencies {
   return {
     checks: {
@@ -102,6 +106,7 @@ function dependencies(
     projects,
     deployments,
     deploymentQueue: queue,
+    projectActionQueue,
     close: async () => undefined,
   };
 }
@@ -342,4 +347,71 @@ test("queue failures mark the deployment failed", async (context) => {
     id: "deployment-1",
     reason: "The deployment queue is unavailable",
   });
+});
+
+test("project runtime actions verify the project and enqueue work", async (context) => {
+  const calls: string[] = [];
+  const actions: ProjectActionQueue = {
+    enqueue: async (projectId, action) => calls.push(`${projectId}:${action}`),
+    close: async () => undefined,
+  };
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore({ findById: async () => project() }),
+      deploymentStore(),
+      deploymentQueue(),
+      actions,
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/stop",
+  });
+
+  assert.equal(response.statusCode, 202);
+  assert.deepEqual(response.json(), { action: "stop", status: "queued" });
+  assert.deepEqual(calls, ["project-1:stop"]);
+});
+
+test("project runtime actions reject missing projects", async (context) => {
+  const app = buildApp({ dependencies: dependencies(), logger: false });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/missing/restart",
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.json().error.code, "PROJECT_NOT_FOUND");
+});
+
+test("project runtime actions report queue failures", async (context) => {
+  const actions: ProjectActionQueue = {
+    enqueue: async () => { throw new Error("redis unavailable"); },
+    close: async () => undefined,
+  };
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projectStore({ findById: async () => project() }),
+      deploymentStore(),
+      deploymentQueue(),
+      actions,
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/projects/project-1/restart",
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error.code, "QUEUE_UNAVAILABLE");
 });

@@ -120,25 +120,25 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Start a uniquely named candidate container from the built image
-- [ ] Add ownership, project, and deployment Docker labels
-- [ ] Attach the candidate to `redner_proxy`
-- [ ] Apply CPU, memory, and PID limits plus `no-new-privileges`
-- [ ] Do not mount the Docker socket or sensitive host paths
-- [ ] Add a bounded HTTP health check for the configured app port
-- [ ] Generate a Caddy route fragment for the healthy candidate
-- [ ] Validate and gracefully reload Caddy before promotion
-- [ ] Promote the routed candidate through `activeDeploymentId`
-- [ ] Stop and remove the previous container only after promotion
-- [ ] Keep the previous version active when startup fails
-- [ ] Implement project stop and restart actions
+- [x] Start a uniquely named candidate container from the built image
+- [x] Add ownership, project, and deployment Docker labels
+- [x] Attach the candidate to `redner_proxy`
+- [x] Apply CPU, memory, and PID limits plus `no-new-privileges`
+- [x] Do not mount the Docker socket or sensitive host paths
+- [x] Add a bounded HTTP health check for the configured app port
+- [x] Generate a Caddy route fragment for the healthy candidate
+- [x] Validate and gracefully reload Caddy before promotion
+- [x] Promote the routed candidate through `activeDeploymentId`
+- [x] Stop and remove the previous container only after promotion
+- [x] Keep the previous version active when startup fails
+- [x] Implement project stop and restart actions
 
 ### Done when
 
-- [ ] A healthy image becomes the active running project
-- [ ] An unhealthy replacement fails without stopping the old version
-- [ ] Stop and restart update actual container and database state
-- [ ] At most one promoted container remains after deployment completes
+- [x] A healthy image becomes the active running project
+- [x] An unhealthy replacement fails without stopping the old version
+- [x] Stop and restart update actual container and database state
+- [x] At most one promoted container remains after deployment completes
 
 ## Phase 7: Stored and Live Logs
 

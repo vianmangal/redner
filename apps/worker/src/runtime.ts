@@ -5,14 +5,18 @@ import {
   createBullConnectionOptions,
   createRedisConnection,
   DEPLOYMENT_QUEUE_NAME,
+  PROJECT_ACTION_QUEUE_NAME,
   type DeploymentJobData,
+  type ProjectActionJobData,
 } from "@redner/queue";
 
 import type { WorkerConfig } from "./config.js";
 import { CloneBuildExecutor } from "./clone-build.js";
+import { DockerContainerLifecycle } from "./container-lifecycle.js";
 import { PrismaWorkerDeploymentStore } from "./deployment-store.js";
 import { createDeploymentProcessor } from "./processor.js";
 import { RedisProjectLockManager } from "./project-lock.js";
+import { createProjectActionProcessor } from "./project-actions.js";
 
 export interface WorkerRuntime {
   close(): Promise<void>;
@@ -22,13 +26,22 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   const database = createDatabaseClient(config.DATABASE_URL);
   const lockConnection = createRedisConnection(config.REDIS_URL, "worker");
   const deployments = new PrismaWorkerDeploymentStore(database);
+  const containers = new DockerContainerLifecycle(deployments, {
+    proxyNetwork: config.REDNER_PROXY_NETWORK,
+    caddyContainer: config.REDNER_CADDY_CONTAINER,
+    caddyRoutesDir: config.REDNER_CADDY_ROUTES_DIR,
+    healthTimeoutMs: config.HEALTH_TIMEOUT_MS,
+    memoryLimit: config.CONTAINER_MEMORY_LIMIT,
+    cpuLimit: config.CONTAINER_CPU_LIMIT,
+    pidsLimit: config.CONTAINER_PIDS_LIMIT,
+  });
   const executor = new CloneBuildExecutor(deployments, {
     buildRoot: config.REDNER_BUILD_ROOT,
     cloneTimeoutMs: config.CLONE_TIMEOUT_MS,
     buildTimeoutMs: config.BUILD_TIMEOUT_MS,
     maxLogLines: config.MAX_BUILD_LOG_LINES,
     maxLogLineLength: config.MAX_LOG_LINE_LENGTH,
-  });
+  }, undefined, containers);
   const locks = new RedisProjectLockManager(
     lockConnection,
     config.DEPLOYMENT_LOCK_TTL_MS,
@@ -40,6 +53,11 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
       connection: createBullConnectionOptions(config.REDIS_URL, "worker"),
       concurrency: config.WORKER_CONCURRENCY,
     },
+  );
+  const actionWorker = new Worker<ProjectActionJobData>(
+    PROJECT_ACTION_QUEUE_NAME,
+    createProjectActionProcessor(database, deployments, locks, containers),
+    { connection: createBullConnectionOptions(config.REDIS_URL, "worker"), concurrency: config.WORKER_CONCURRENCY },
   );
 
   worker.on("completed", (job) => {
@@ -53,10 +71,19 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   worker.on("error", (error) => {
     console.error("deployment worker error", error);
   });
+  actionWorker.on("failed", (job, error) => {
+    console.error(
+      `project action job ${job?.id ?? "unknown"} failed: ${error.message}`,
+    );
+  });
+  actionWorker.on("error", (error) => {
+    console.error("project action worker error", error);
+  });
 
   return {
     close: async () => {
       await worker.close();
+      await actionWorker.close();
       if (lockConnection.status !== "end") {
         lockConnection.disconnect();
       }

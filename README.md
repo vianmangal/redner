@@ -15,10 +15,11 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-Phases 0 through 5 are complete: the npm workspace foundation, local
+Phases 0 through 6 are complete: the npm workspace foundation, local
 infrastructure, Prisma data model, project API, Next.js dashboard, BullMQ queue,
 deployment worker, safe repository cloning, and Docker image builds are in place.
-Container startup and health checks begin in Phase 6.
+Candidate containers, health checks, Caddy promotion, stop, and restart are also
+implemented. Stored and live deployment logs begin in Phase 7.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)

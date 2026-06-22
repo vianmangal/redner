@@ -10,6 +10,11 @@ export {
   type CloneBuildConfig,
   type DeploymentExecutor,
 } from "./clone-build.js";
+export {
+  DockerContainerLifecycle,
+  type ContainerConfig,
+  type ContainerLifecycle,
+} from "./container-lifecycle.js";
 
 export { loadWorkerConfig } from "./config.js";
 export {
@@ -18,6 +23,7 @@ export {
   type WorkerDeploymentStore,
 } from "./deployment-store.js";
 export { createDeploymentProcessor } from "./processor.js";
+export { createProjectActionProcessor } from "./project-actions.js";
 export {
   ProcessExecutionError,
   runProcess,

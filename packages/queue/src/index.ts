@@ -10,6 +10,7 @@ export const workspace: WorkspaceInfo = {
 
 export const DEPLOYMENT_QUEUE_NAME = "redner-deployments";
 export const DEPLOYMENT_JOB_NAME = "deploy";
+export const PROJECT_ACTION_QUEUE_NAME = "redner-project-actions";
 
 export interface DeploymentJobData {
   deploymentId: string;
@@ -17,6 +18,16 @@ export interface DeploymentJobData {
 
 export interface DeploymentQueue {
   enqueue(deploymentId: string): Promise<void>;
+  close(): Promise<void>;
+}
+
+export type ProjectAction = "stop" | "restart";
+export interface ProjectActionJobData {
+  projectId: string;
+  action: ProjectAction;
+}
+export interface ProjectActionQueue {
+  enqueue(projectId: string, action: ProjectAction): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -101,6 +112,28 @@ export class BullDeploymentQueue implements DeploymentQueue {
       { deploymentId },
       { jobId: deploymentId },
     );
+  }
+
+  async close(): Promise<void> {
+    await this.queue.close();
+  }
+}
+
+export class BullProjectActionQueue implements ProjectActionQueue {
+  private readonly queue: Queue<ProjectActionJobData>;
+
+  constructor(redisUrl: string) {
+    this.queue = new Queue(PROJECT_ACTION_QUEUE_NAME, {
+      connection: createBullConnectionOptions(redisUrl),
+      defaultJobOptions: deploymentJobOptions,
+    });
+    this.queue.on("error", () => {
+      // enqueue() reports producer failures to the API request.
+    });
+  }
+
+  async enqueue(projectId: string, action: ProjectAction): Promise<void> {
+    await this.queue.add(action, { projectId, action });
   }
 
   async close(): Promise<void> {
