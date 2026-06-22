@@ -39,8 +39,7 @@ export default async function ProjectsPage() {
             Your local services
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
-            Deploy trusted GitHub repositories, open their stable local URLs,
-            and follow build or runtime logs live.
+            RENDER CLONE BASICALLY - make sure ur project has a dockerfile
           </p>
         </div>
         <Link
