@@ -2,6 +2,7 @@ import type {
   ApiErrorResponse,
   CreateProjectInput,
   Deployment,
+  DeploymentLog,
   Project,
 } from "@redner/shared";
 
@@ -85,6 +86,27 @@ export async function listDeployments(id: string): Promise<Deployment[]> {
     `/projects/${encodeURIComponent(id)}/deployments`,
   );
   return response.deployments;
+}
+
+export async function getDeployment(id: string): Promise<Deployment> {
+  const response = await request<{ deployment: Deployment }>(
+    `/deployments/${encodeURIComponent(id)}`,
+  );
+  return response.deployment;
+}
+
+export async function listDeploymentLogs(
+  id: string,
+  after = 0,
+  limit = 500,
+): Promise<{ logs: DeploymentLog[]; nextSequence: number }> {
+  return request(
+    `/deployments/${encodeURIComponent(id)}/logs?after=${after}&limit=${limit}`,
+  );
+}
+
+export function deploymentLogStreamUrl(id: string, after = 0): string {
+  return `${apiUrl}/deployments/${encodeURIComponent(id)}/logs/stream?after=${after}`;
 }
 
 export async function runProjectAction(

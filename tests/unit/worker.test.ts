@@ -29,6 +29,9 @@ function store(overrides: Partial<WorkerDeploymentStore> = {}) {
     appendBuildLog: async (_id, message) => {
       logs.push(message);
     },
+    appendRuntimeLog: async (_id, message) => {
+      logs.push(message);
+    },
     markCloning: async () => undefined,
     markBuilding: async () => undefined,
     markStarting: async () => undefined,

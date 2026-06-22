@@ -7,6 +7,9 @@ import {
   BullDeploymentQueue,
   BullProjectActionQueue,
   createRedisConnection,
+  RedisDeploymentLogSubscriber,
+  RedisDeploymentLogPublisher,
+  type DeploymentLogSubscriber,
   type DeploymentQueue,
   type ProjectActionQueue,
 } from "@redner/queue";
@@ -17,6 +20,7 @@ import {
   type DeploymentStore,
 } from "./deployments/store.js";
 import { PrismaProjectStore, type ProjectStore } from "./projects/store.js";
+import { PrismaDeploymentLogStore, type DeploymentLogStore } from "./logs/store.js";
 
 export type DependencyName = "database" | "redis";
 export type DependencyCheck = () => Promise<void>;
@@ -27,6 +31,8 @@ export interface AppDependencies {
   deployments: DeploymentStore;
   deploymentQueue: DeploymentQueue;
   projectActionQueue: ProjectActionQueue;
+  logs: DeploymentLogStore;
+  logSubscriber: DeploymentLogSubscriber;
   close: () => Promise<void>;
 }
 
@@ -45,6 +51,8 @@ export function createDependencies(config: ApiConfig): AppDependencies {
   const redis = createRedisConnection(config.REDIS_URL);
   const deploymentQueue = new BullDeploymentQueue(config.REDIS_URL);
   const projectActionQueue = new BullProjectActionQueue(config.REDIS_URL);
+  const logSubscriber = new RedisDeploymentLogSubscriber(config.REDIS_URL);
+  const logPublisher = new RedisDeploymentLogPublisher(config.REDIS_URL);
 
   return {
     checks: {
@@ -52,12 +60,16 @@ export function createDependencies(config: ApiConfig): AppDependencies {
       redis: () => checkRedis(redis),
     },
     projects: new PrismaProjectStore(database),
-    deployments: new PrismaDeploymentStore(database),
+    deployments: new PrismaDeploymentStore(database, logPublisher),
     deploymentQueue,
     projectActionQueue,
+    logs: new PrismaDeploymentLogStore(database),
+    logSubscriber,
     close: async () => {
       await deploymentQueue.close();
       await projectActionQueue.close();
+      await logSubscriber.close();
+      await logPublisher.close();
       await database.$disconnect();
 
       if (redis.status !== "end") {

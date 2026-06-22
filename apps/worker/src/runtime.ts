@@ -6,6 +6,7 @@ import {
   createRedisConnection,
   DEPLOYMENT_QUEUE_NAME,
   PROJECT_ACTION_QUEUE_NAME,
+  RedisDeploymentLogPublisher,
   type DeploymentJobData,
   type ProjectActionJobData,
 } from "@redner/queue";
@@ -17,6 +18,7 @@ import { PrismaWorkerDeploymentStore } from "./deployment-store.js";
 import { createDeploymentProcessor } from "./processor.js";
 import { RedisProjectLockManager } from "./project-lock.js";
 import { createProjectActionProcessor } from "./project-actions.js";
+import { DockerRuntimeLogCollector } from "./runtime-logs.js";
 
 export interface WorkerRuntime {
   close(): Promise<void>;
@@ -25,7 +27,17 @@ export interface WorkerRuntime {
 export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
   const database = createDatabaseClient(config.DATABASE_URL);
   const lockConnection = createRedisConnection(config.REDIS_URL, "worker");
-  const deployments = new PrismaWorkerDeploymentStore(database);
+  const logPublisher = new RedisDeploymentLogPublisher(config.REDIS_URL);
+  const deployments = new PrismaWorkerDeploymentStore(
+    database,
+    logPublisher,
+    config.MAX_RETAINED_LOG_LINES,
+    config.MAX_LOG_LINE_LENGTH,
+  );
+  const runtimeLogs = new DockerRuntimeLogCollector(
+    deployments,
+    config.MAX_LOG_LINE_LENGTH,
+  );
   const containers = new DockerContainerLifecycle(deployments, {
     proxyNetwork: config.REDNER_PROXY_NETWORK,
     caddyContainer: config.REDNER_CADDY_CONTAINER,
@@ -34,7 +46,7 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
     memoryLimit: config.CONTAINER_MEMORY_LIMIT,
     cpuLimit: config.CONTAINER_CPU_LIMIT,
     pidsLimit: config.CONTAINER_PIDS_LIMIT,
-  });
+  }, undefined, runtimeLogs);
   const executor = new CloneBuildExecutor(deployments, {
     buildRoot: config.REDNER_BUILD_ROOT,
     cloneTimeoutMs: config.CLONE_TIMEOUT_MS,
@@ -84,6 +96,8 @@ export function createWorkerRuntime(config: WorkerConfig): WorkerRuntime {
     close: async () => {
       await worker.close();
       await actionWorker.close();
+      await runtimeLogs.close();
+      await logPublisher.close();
       if (lockConnection.status !== "end") {
         lockConnection.disconnect();
       }

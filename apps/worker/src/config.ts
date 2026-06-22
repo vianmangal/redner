@@ -30,6 +30,7 @@ const environmentSchema = z.object({
   BUILD_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(600_000),
   MAX_BUILD_LOG_LINES: z.coerce.number().int().min(10).default(2_000),
   MAX_LOG_LINE_LENGTH: z.coerce.number().int().min(80).default(4_000),
+  MAX_RETAINED_LOG_LINES: z.coerce.number().int().min(100).default(5_000),
   REDNER_PROXY_NETWORK: z.string().min(1).default("redner_proxy"),
   REDNER_CADDY_CONTAINER: z.string().min(1).default("redner-caddy"),
   REDNER_CADDY_ROUTES_DIR: z.string().min(1).default("./data/caddy/routes"),

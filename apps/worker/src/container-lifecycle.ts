@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { DeploymentWorkItem, WorkerDeploymentStore } from "./deployment-store.js";
 import { runProcess, type ProcessRunner } from "./process-runner.js";
+import type { RuntimeLogCollector } from "./runtime-logs.js";
 
 export interface ContainerConfig {
   proxyNetwork: string;
@@ -23,6 +24,7 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
     private readonly deployments: WorkerDeploymentStore,
     private readonly config: ContainerConfig,
     private readonly process: ProcessRunner = runProcess,
+    private readonly runtimeLogs?: RuntimeLogCollector,
   ) {}
 
   async promote(deployment: DeploymentWorkItem, imageName: string): Promise<void> {
@@ -31,6 +33,7 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
     let routePath: string | undefined;
     let previousRoute: string | null | undefined;
     let routeChanged = false;
+    const containerStartedAt = new Date();
     await this.process("docker", ["rm", "--force", name], this.options(30_000)).catch(() => undefined);
 
     try {
@@ -93,6 +96,7 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
           ).catch(() => undefined);
         });
       }
+      await this.resumeRuntimeLogs(deployment.id, containerId, containerStartedAt);
     } catch (error) {
       if (routeChanged && !promoted && routePath !== undefined && previousRoute !== undefined) {
         try {
@@ -133,6 +137,16 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       }
     }
     throw new Error(`Candidate health check timed out after ${this.config.healthTimeoutMs}ms`);
+  }
+
+  async resumeRuntimeLogs(
+    deploymentId: string,
+    containerId: string,
+    since: Date,
+  ): Promise<void> {
+    await this.runtimeLogs
+      ?.start(deploymentId, containerId, since)
+      .catch(() => undefined);
   }
 
   private caddy(command: "validate" | "reload") {

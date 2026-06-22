@@ -35,6 +35,7 @@ function store(overrides: Partial<WorkerDeploymentStore> = {}): WorkerDeployment
     load: async () => deployment,
     appendSystemLog: async () => undefined,
     appendBuildLog: async () => undefined,
+    appendRuntimeLog: async () => undefined,
     markCloning: async () => undefined,
     markBuilding: async () => undefined,
     markStarting: async () => undefined,

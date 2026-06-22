@@ -25,6 +25,10 @@ export {
 export { createDeploymentProcessor } from "./processor.js";
 export { createProjectActionProcessor } from "./project-actions.js";
 export {
+  DockerRuntimeLogCollector,
+  type RuntimeLogCollector,
+} from "./runtime-logs.js";
+export {
   ProcessExecutionError,
   runProcess,
   type ProcessOutputLine,

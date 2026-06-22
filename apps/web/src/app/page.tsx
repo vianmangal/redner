@@ -39,8 +39,8 @@ export default async function ProjectsPage() {
             Your local services
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
-            Configure trusted GitHub repositories and queue deployment jobs.
-            Stored and live deployment logs arrive in Phase 7.
+            Deploy trusted GitHub repositories, open their stable local URLs,
+            and follow build or runtime logs live.
           </p>
         </div>
         <Link

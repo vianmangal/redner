@@ -15,6 +15,10 @@ export {
   type DeploymentStore,
 } from "./deployments/store.js";
 export {
+  PrismaDeploymentLogStore,
+  type DeploymentLogStore,
+} from "./logs/store.js";
+export {
   DuplicateProjectSlugError,
   type DeleteProjectResult,
   type ProjectStore,

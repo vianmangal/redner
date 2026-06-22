@@ -15,11 +15,12 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-Phases 0 through 6 are complete: the npm workspace foundation, local
+Phases 0 through 8 are complete: the npm workspace foundation, local
 infrastructure, Prisma data model, project API, Next.js dashboard, BullMQ queue,
 deployment worker, safe repository cloning, and Docker image builds are in place.
 Candidate containers, health checks, Caddy promotion, stop, and restart are also
-implemented. Stored and live deployment logs begin in Phase 7.
+implemented. Deployment logs are stored, streamed live with SSE, and displayed in
+the dashboard. Stable `.localhost` application routing is verified through Caddy.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)
@@ -92,6 +93,27 @@ npm run dev
 Open `http://localhost:3000` to create and manage project configurations. Local
 application hostnames continue to use `.localhost`; a personal base domain is
 configured only during the optional single-VPS phase.
+
+After a successful deployment, open `http://project-slug.localhost` from its
+project page. Modern browsers resolve `.localhost` automatically. If an
+environment does not, add each project hostname explicitly to `/etc/hosts`:
+
+```text
+127.0.0.1 project-slug.localhost
+```
+
+Application containers do not publish random host ports. Caddy is the only HTTP
+entry point and forwards each validated hostname over the shared Docker network.
+
+Deployment output is available through the dashboard or these API endpoints:
+
+```text
+GET /deployments/:id/logs?after=0&limit=200
+GET /deployments/:id/logs/stream
+```
+
+The stream sends stored backlog first, then Redis-backed live events with SSE IDs
+and heartbeat comments so browsers can reconnect without duplicating lines.
 
 ## Technology
 

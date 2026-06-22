@@ -2,8 +2,10 @@ import {
   Prisma,
   type DatabaseClient,
   type Deployment as DatabaseDeployment,
+  type Log as DatabaseLog,
 } from "@redner/database";
-import type { Deployment } from "@redner/shared";
+import type { DeploymentLogPublisher } from "@redner/queue";
+import type { Deployment, DeploymentLog } from "@redner/shared";
 
 const activeStatuses = ["queued", "cloning", "building", "starting"] as const;
 
@@ -15,15 +17,19 @@ export type CreateDeploymentResult =
 export interface DeploymentStore {
   createQueued(projectId: string): Promise<CreateDeploymentResult>;
   listForProject(projectId: string): Promise<Deployment[] | null>;
+  findById(deploymentId: string): Promise<Deployment | null>;
   fail(deploymentId: string, reason: string): Promise<void>;
 }
 
 export class PrismaDeploymentStore implements DeploymentStore {
-  constructor(private readonly database: DatabaseClient) {}
+  constructor(
+    private readonly database: DatabaseClient,
+    private readonly publisher?: DeploymentLogPublisher,
+  ) {}
 
   async createQueued(projectId: string): Promise<CreateDeploymentResult> {
     try {
-      return await this.database.$transaction(async (transaction) => {
+      const result = await this.database.$transaction(async (transaction) => {
         const project = await transaction.project.findUnique({
           where: { id: projectId },
         });
@@ -58,8 +64,25 @@ export class PrismaDeploymentStore implements DeploymentStore {
           },
         });
 
-        return { kind: "created", deployment: serializeDeployment(deployment) };
+        return {
+          kind: "created",
+          deployment: serializeDeployment(deployment),
+        } as const;
       });
+      if (result.kind === "created") {
+        const queuedLog = await this.database.log.findUnique({
+          where: {
+            deploymentId_sequence: {
+              deploymentId: result.deployment.id,
+              sequence: 1,
+            },
+          },
+        });
+        if (queuedLog !== null) {
+          await this.publisher?.publish(serializeLog(queuedLog)).catch(() => undefined);
+        }
+      }
+      return result;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -87,8 +110,15 @@ export class PrismaDeploymentStore implements DeploymentStore {
     return deployments.map(serializeDeployment);
   }
 
+  async findById(deploymentId: string): Promise<Deployment | null> {
+    const deployment = await this.database.deployment.findUnique({
+      where: { id: deploymentId },
+    });
+    return deployment === null ? null : serializeDeployment(deployment);
+  }
+
   async fail(deploymentId: string, reason: string): Promise<void> {
-    await this.database.$transaction(async (transaction) => {
+    const log = await this.database.$transaction(async (transaction) => {
       const latestLog = await transaction.log.findFirst({
         where: { deploymentId },
         orderBy: { sequence: "desc" },
@@ -103,7 +133,7 @@ export class PrismaDeploymentStore implements DeploymentStore {
           finishedAt: new Date(),
         },
       });
-      await transaction.log.create({
+      return transaction.log.create({
         data: {
           deploymentId,
           sequence: (latestLog?.sequence ?? 0) + 1,
@@ -112,7 +142,12 @@ export class PrismaDeploymentStore implements DeploymentStore {
         },
       });
     });
+    await this.publisher?.publish(serializeLog(log)).catch(() => undefined);
   }
+}
+
+function serializeLog(log: DatabaseLog): DeploymentLog {
+  return { ...log, createdAt: log.createdAt.toISOString() };
 }
 
 function serializeDeployment(deployment: DatabaseDeployment): Deployment {

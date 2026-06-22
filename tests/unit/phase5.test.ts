@@ -27,6 +27,7 @@ function deploymentStore() {
     load: async () => deployment,
     appendSystemLog: async (_id, message) => events.push(`system:${message}`),
     appendBuildLog: async (_id, message) => events.push(`build:${message}`),
+    appendRuntimeLog: async (_id, message) => events.push(`runtime:${message}`),
     markCloning: async () => events.push("status:cloning"),
     markBuilding: async (_id, commit, image) =>
       events.push(`status:building:${commit}:${image}`),

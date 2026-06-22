@@ -12,6 +12,7 @@ import type {
 } from "./dependencies.js";
 import { registerProjectRoutes } from "./projects/routes.js";
 import { registerProjectActionRoutes } from "./projects/actions.js";
+import { registerDeploymentLogRoutes } from "./logs/routes.js";
 
 type DependencyStatus = "up" | "down";
 
@@ -129,6 +130,13 @@ export function buildApp({
       actionApp,
       dependencies.projects,
       dependencies.projectActionQueue,
+    ),
+  );
+  void app.register(async (logApp) =>
+    registerDeploymentLogRoutes(
+      logApp,
+      dependencies.logs,
+      dependencies.logSubscriber,
     ),
   );
 

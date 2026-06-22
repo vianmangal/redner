@@ -6,12 +6,18 @@ import {
   DuplicateProjectSlugError,
   type AppDependencies,
   type DeploymentStore,
+  type DeploymentLogStore,
   type ProjectStore,
 } from "@redner/api";
-import type { DeploymentQueue, ProjectActionQueue } from "@redner/queue";
+import type {
+  DeploymentLogSubscriber,
+  DeploymentQueue,
+  ProjectActionQueue,
+} from "@redner/queue";
 import type {
   CreateProjectInput,
   Deployment,
+  DeploymentLog,
   Project,
 } from "@redner/shared";
 
@@ -72,8 +78,36 @@ function deploymentStore(
       deployment: deployment(),
     }),
     listForProject: async () => [],
+    findById: async () => null,
     fail: async () => undefined,
     ...overrides,
+  };
+}
+
+function deploymentLog(overrides: Partial<DeploymentLog> = {}): DeploymentLog {
+  return {
+    id: "log-1",
+    deploymentId: "deployment-1",
+    sequence: 1,
+    type: "system",
+    message: "Deployment queued",
+    createdAt: "2026-06-21T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function logStore(overrides: Partial<DeploymentLogStore> = {}): DeploymentLogStore {
+  return {
+    deploymentExists: async () => true,
+    listAfter: async () => [],
+    ...overrides,
+  };
+}
+
+function logSubscriber(): DeploymentLogSubscriber {
+  return {
+    subscribe: async () => async () => undefined,
+    close: async () => undefined,
   };
 }
 
@@ -107,6 +141,8 @@ function dependencies(
     deployments,
     deploymentQueue: queue,
     projectActionQueue,
+    logs: logStore(),
+    logSubscriber: logSubscriber(),
     close: async () => undefined,
   };
 }
@@ -414,4 +450,50 @@ test("project runtime actions report queue failures", async (context) => {
 
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error.code, "QUEUE_UNAVAILABLE");
+});
+
+test("deployment detail and paginated logs are returned in sequence", async (context) => {
+  const entries = [
+    deploymentLog({ id: "log-2", sequence: 2, message: "Cloning" }),
+    deploymentLog({ id: "log-3", sequence: 3, message: "Building" }),
+  ];
+  const appDependencies = dependencies(
+    {},
+    projectStore(),
+    deploymentStore({ findById: async () => deployment() }),
+  );
+  appDependencies.logs = logStore({
+    listAfter: async (_deploymentId, after, limit) =>
+      entries.filter((entry) => entry.sequence > after).slice(0, limit),
+  });
+  const app = buildApp({ dependencies: appDependencies, logger: false });
+  context.after(() => app.close());
+
+  const detail = await app.inject({
+    method: "GET",
+    url: "/deployments/deployment-1",
+  });
+  const logs = await app.inject({
+    method: "GET",
+    url: "/deployments/deployment-1/logs?after=1&limit=1",
+  });
+
+  assert.equal(detail.statusCode, 200);
+  assert.equal(detail.json().deployment.id, "deployment-1");
+  assert.deepEqual(logs.json(), { logs: [entries[0]], nextSequence: 2 });
+});
+
+test("logs return not found for an unknown deployment", async (context) => {
+  const appDependencies = dependencies();
+  appDependencies.logs = logStore({ deploymentExists: async () => false });
+  const app = buildApp({ dependencies: appDependencies, logger: false });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/deployments/missing/logs",
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.json().error.code, "DEPLOYMENT_NOT_FOUND");
 });

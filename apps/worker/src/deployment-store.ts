@@ -2,7 +2,10 @@ import {
   Prisma,
   type DatabaseClient,
   type Deployment,
+  type Log,
 } from "@redner/database";
+import type { DeploymentLog, LogType } from "@redner/shared";
+import type { DeploymentLogPublisher } from "@redner/queue";
 
 export interface DeploymentWorkItem {
   id: string;
@@ -17,6 +20,7 @@ export interface WorkerDeploymentStore {
   load(deploymentId: string): Promise<DeploymentWorkItem | null>;
   appendSystemLog(deploymentId: string, message: string): Promise<void>;
   appendBuildLog(deploymentId: string, message: string): Promise<void>;
+  appendRuntimeLog(deploymentId: string, message: string): Promise<void>;
   markCloning(deploymentId: string): Promise<void>;
   markBuilding(
     deploymentId: string,
@@ -33,7 +37,12 @@ export interface WorkerDeploymentStore {
 }
 
 export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
-  constructor(private readonly database: DatabaseClient) {}
+  constructor(
+    private readonly database: DatabaseClient,
+    private readonly publisher?: DeploymentLogPublisher,
+    private readonly maxRetainedLines = 5_000,
+    private readonly maxLineLength = 4_000,
+  ) {}
 
   async load(deploymentId: string): Promise<DeploymentWorkItem | null> {
     const deployment = await this.database.deployment.findUnique({
@@ -48,6 +57,10 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
 
   async appendBuildLog(deploymentId: string, message: string): Promise<void> {
     await this.appendLog(deploymentId, "build", message);
+  }
+
+  async appendRuntimeLog(deploymentId: string, message: string): Promise<void> {
+    await this.appendLog(deploymentId, "runtime", message);
   }
 
   async markCloning(deploymentId: string): Promise<void> {
@@ -104,26 +117,34 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
 
   private async appendLog(
     deploymentId: string,
-    type: "system" | "build",
+    type: LogType,
     message: string,
   ): Promise<void> {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
-        await this.database.$transaction(async (transaction) => {
+        const log = await this.database.$transaction(async (transaction) => {
           const latest = await transaction.log.findFirst({
             where: { deploymentId },
             orderBy: { sequence: "desc" },
             select: { sequence: true },
           });
-          await transaction.log.create({
+          const created = await transaction.log.create({
             data: {
               deploymentId,
               sequence: (latest?.sequence ?? 0) + 1,
               type,
-              message,
+              message: message.slice(0, this.maxLineLength),
             },
           });
+          const oldestSequenceToKeep = created.sequence - this.maxRetainedLines + 1;
+          if (oldestSequenceToKeep > 1) {
+            await transaction.log.deleteMany({
+              where: { deploymentId, sequence: { lt: oldestSequenceToKeep } },
+            });
+          }
+          return created;
         });
+        await this.publisher?.publish(serializeLog(log)).catch(() => undefined);
         return;
       } catch (error) {
         const sequenceConflict =
@@ -147,6 +168,13 @@ export class PrismaWorkerDeploymentStore implements WorkerDeploymentStore {
     });
     await this.appendSystemLog(deploymentId, `Deployment failed: ${reason}`);
   }
+}
+
+function serializeLog(log: Log): DeploymentLog {
+  return {
+    ...log,
+    createdAt: log.createdAt.toISOString(),
+  };
 }
 
 function toWorkItem(deployment: Deployment): DeploymentWorkItem {

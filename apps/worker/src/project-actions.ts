@@ -30,6 +30,7 @@ export function createProjectActionProcessor(
         await database.project.update({ where: { id: project.id }, data: { status: "stopped" } });
         await deployments.appendSystemLog(active.id, "Project container stopped");
       } else {
+        const containerStartedAt = new Date();
         await process("docker", ["start", active.containerId], options());
         const inspected = await process(
           "docker",
@@ -40,6 +41,11 @@ export function createProjectActionProcessor(
         await containers.checkHealth(containerName, project.appPort);
         await database.project.update({ where: { id: project.id }, data: { status: "running" } });
         await deployments.appendSystemLog(active.id, "Project container restarted");
+        await containers.resumeRuntimeLogs(
+          active.id,
+          active.containerId,
+          containerStartedAt,
+        );
       }
     } finally {
       await lock.release();

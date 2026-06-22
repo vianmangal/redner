@@ -144,39 +144,39 @@ verification before moving to the next one.
 
 ### Build
 
-- [ ] Collect build, system, and runtime log types
-- [ ] Add `GET /deployments/:id/logs` with ordered pagination
-- [ ] Publish new log records through Redis Pub/Sub
-- [ ] Add `GET /deployments/:id/logs/stream` as `text/event-stream`
-- [ ] Send stored backlog before live SSE events
-- [ ] Add SSE IDs, heartbeat comments, and reconnection support
-- [ ] Add the deployment log page and terminal-style viewer
-- [ ] Cap line length and retained lines per deployment
+- [x] Collect build, system, and runtime log types
+- [x] Add `GET /deployments/:id/logs` with ordered pagination
+- [x] Publish new log records through Redis Pub/Sub
+- [x] Add `GET /deployments/:id/logs/stream` as `text/event-stream`
+- [x] Send stored backlog before live SSE events
+- [x] Add SSE IDs, heartbeat comments, and reconnection support
+- [x] Add the deployment log page and terminal-style viewer
+- [x] Cap line length and retained lines per deployment
 
 ### Done when
 
-- [ ] Build logs appear while a deployment is running
-- [ ] Refreshing the page restores stored history without duplicates
-- [ ] Runtime logs appear after the deployment succeeds
-- [ ] Disconnecting and reconnecting resumes from the last event ID
+- [x] Build logs appear while a deployment is running
+- [x] Refreshing the page restores stored history without duplicates
+- [x] Runtime logs appear after the deployment succeeds
+- [x] Disconnecting and reconnecting resumes from the last event ID
 
 ## Phase 8: Local Routing
 
 ### Build
 
-- [ ] Generate one Caddy route fragment from the validated project slug
-- [ ] Route `project-slug.localhost` to the configured container port
-- [ ] Write route fragments atomically, then validate the complete Caddyfile
-- [ ] Gracefully reload Caddy and preserve the old route if reload fails
-- [ ] Publish HTTP only through Caddy
-- [ ] Display the application URL on project pages
-- [ ] Document an `/etc/hosts` fallback for unsupported environments
+- [x] Generate one Caddy route fragment from the validated project slug
+- [x] Route `project-slug.localhost` to the configured container port
+- [x] Write route fragments atomically, then validate the complete Caddyfile
+- [x] Gracefully reload Caddy and preserve the old route if reload fails
+- [x] Publish HTTP only through Caddy
+- [x] Display the application URL on project pages
+- [x] Document an `/etc/hosts` fallback for unsupported environments
 
 ### Done when
 
-- [ ] Two projects route to different containers by hostname
-- [ ] Redeployment keeps the stable project URL
-- [ ] Application containers do not require random published host ports
+- [x] Two projects route to different containers by hostname
+- [x] Redeployment keeps the stable project URL
+- [x] Application containers do not require random published host ports
 
 ## Phase 9: Recovery and Cleanup
 

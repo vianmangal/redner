@@ -68,4 +68,16 @@ export async function registerDeploymentRoutes(
       return { deployments: deploymentsForProject };
     },
   );
+
+  app.get<{ Params: { id: string } }>(
+    "/deployments/:id",
+    async (request) => {
+      const deploymentId = parseProjectId(request.params.id);
+      const deployment = await deployments.findById(deploymentId);
+      if (deployment === null) {
+        throw new ApiError(404, "DEPLOYMENT_NOT_FOUND", "Deployment not found");
+      }
+      return { deployment };
+    },
+  );
 }

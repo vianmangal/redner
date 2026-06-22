@@ -77,7 +77,21 @@ export default async function ProjectPage({
       </div>
 
       <section className="glass-panel mt-10 grid gap-px overflow-hidden rounded-[2rem] bg-white/35 sm:grid-cols-2">
-        <Detail label="Local hostname" value={`${project.slug}.localhost`} mono />
+        <div className="bg-white/45 p-5 backdrop-blur-xl">
+          <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Application URL
+          </dt>
+          <dd className="mt-2 text-sm">
+            <a
+              href={`http://${project.slug}.localhost`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-accent hover:text-accent-dark"
+            >
+              http://{project.slug}.localhost
+            </a>
+          </dd>
+        </div>
         <Detail label="Runtime status" value={project.status} />
         <Detail label="Git branch" value={project.branch} mono />
         <Detail label="Application port" value={String(project.appPort)} mono />
@@ -107,8 +121,9 @@ export default async function ProjectPage({
         ) : (
           <div className="mt-4 divide-y divide-line">
             {deployments.slice(0, 5).map((deployment) => (
-              <div
+              <Link
                 key={deployment.id}
+                href={`/deployments/${deployment.id}`}
                 className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
               >
                 <div className="min-w-0">
@@ -123,7 +138,7 @@ export default async function ProjectPage({
                   </p>
                 </div>
                 <DeploymentBadge status={deployment.status} />
-              </div>
+              </Link>
             ))}
           </div>
         )}

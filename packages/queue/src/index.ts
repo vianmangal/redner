@@ -1,7 +1,7 @@
 import { Queue, type ConnectionOptions, type JobsOptions } from "bullmq";
 import { Redis, type RedisOptions } from "ioredis";
 
-import type { WorkspaceInfo } from "@redner/shared";
+import type { DeploymentLog, WorkspaceInfo } from "@redner/shared";
 
 export const workspace: WorkspaceInfo = {
   name: "queue",
@@ -11,6 +11,7 @@ export const workspace: WorkspaceInfo = {
 export const DEPLOYMENT_QUEUE_NAME = "redner-deployments";
 export const DEPLOYMENT_JOB_NAME = "deploy";
 export const PROJECT_ACTION_QUEUE_NAME = "redner-project-actions";
+const DEPLOYMENT_LOG_CHANNEL_PREFIX = "redner:deployment-logs:";
 
 export interface DeploymentJobData {
   deploymentId: string;
@@ -28,6 +29,21 @@ export interface ProjectActionJobData {
 }
 export interface ProjectActionQueue {
   enqueue(projectId: string, action: ProjectAction): Promise<void>;
+  close(): Promise<void>;
+}
+
+export interface DeploymentLogPublisher {
+  publish(log: DeploymentLog): Promise<void>;
+  close(): Promise<void>;
+}
+
+export type DeploymentLogListener = (log: DeploymentLog) => void;
+
+export interface DeploymentLogSubscriber {
+  subscribe(
+    deploymentId: string,
+    listener: DeploymentLogListener,
+  ): Promise<() => Promise<void>>;
   close(): Promise<void>;
 }
 
@@ -58,6 +74,10 @@ export function createRedisConnection(
 
 export function deploymentLockKey(projectId: string): string {
   return `redner:deployment-lock:${projectId}`;
+}
+
+export function deploymentLogChannel(deploymentId: string): string {
+  return `${DEPLOYMENT_LOG_CHANNEL_PREFIX}${deploymentId}`;
 }
 
 export function createBullConnectionOptions(
@@ -138,5 +158,77 @@ export class BullProjectActionQueue implements ProjectActionQueue {
 
   async close(): Promise<void> {
     await this.queue.close();
+  }
+}
+
+export class RedisDeploymentLogPublisher implements DeploymentLogPublisher {
+  private readonly redis: Redis;
+
+  constructor(redisUrl: string) {
+    this.redis = createRedisConnection(redisUrl, "worker");
+  }
+
+  async publish(log: DeploymentLog): Promise<void> {
+    await this.redis.publish(
+      deploymentLogChannel(log.deploymentId),
+      JSON.stringify(log),
+    );
+  }
+
+  async close(): Promise<void> {
+    if (this.redis.status !== "end") this.redis.disconnect();
+  }
+}
+
+export class RedisDeploymentLogSubscriber implements DeploymentLogSubscriber {
+  private readonly redis: Redis;
+  private readonly listeners = new Map<string, Set<DeploymentLogListener>>();
+
+  constructor(redisUrl: string) {
+    this.redis = createRedisConnection(redisUrl, "worker");
+    this.redis.on("message", (channel, message) => {
+      const listeners = this.listeners.get(channel);
+      if (listeners === undefined) return;
+
+      try {
+        const log = JSON.parse(message) as DeploymentLog;
+        for (const listener of listeners) listener(log);
+      } catch {
+        // Ignore malformed messages; stored PostgreSQL logs remain authoritative.
+      }
+    });
+  }
+
+  async subscribe(
+    deploymentId: string,
+    listener: DeploymentLogListener,
+  ): Promise<() => Promise<void>> {
+    const channel = deploymentLogChannel(deploymentId);
+    let listeners = this.listeners.get(channel);
+    if (listeners === undefined) {
+      listeners = new Set();
+      this.listeners.set(channel, listeners);
+      try {
+        await this.redis.subscribe(channel);
+      } catch (error) {
+        this.listeners.delete(channel);
+        throw error;
+      }
+    }
+    listeners.add(listener);
+
+    return async () => {
+      const current = this.listeners.get(channel);
+      current?.delete(listener);
+      if (current !== undefined && current.size === 0) {
+        this.listeners.delete(channel);
+        if (this.redis.status !== "end") await this.redis.unsubscribe(channel);
+      }
+    };
+  }
+
+  async close(): Promise<void> {
+    this.listeners.clear();
+    if (this.redis.status !== "end") this.redis.disconnect();
   }
 }

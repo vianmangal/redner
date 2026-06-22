@@ -17,7 +17,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "tsx --test tests/unit/**/*.test.ts",
-    "test:integration": "tsx --test tests/integration/**/*.test.ts",
+    "test:integration": "tsx --test --test-concurrency=1 tests/integration/**/*.test.ts",
     "db:generate": "npm run prisma:generate --workspace @redner/database",
     "db:migrate": "npm run prisma:migrate --workspace @redner/database --",
     "db:deploy": "npm run prisma:deploy --workspace @redner/database",
