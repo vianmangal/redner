@@ -13,11 +13,10 @@ export default function NewProjectPage() {
           New project
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-[-0.05em]">
-          Connect a repository
+          Connect a repo
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted">
-          Use a trusted public GitHub repository with a Dockerfile. Redner will
-          save its configuration and let you verify the deployment queue handoff.
+          RENDER CLONE BASICALLY - make sure ur project has a dockerfile
         </p>
         <div className="mt-8">
           <ProjectForm />
