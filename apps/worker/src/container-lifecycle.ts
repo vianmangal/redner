@@ -29,6 +29,12 @@ export interface ContainerLifecycle {
   ): Promise<void>;
 }
 
+export interface RuntimeRemoval {
+  slug: string;
+  containerId: string;
+  imageName: string | null;
+}
+
 export class DockerContainerLifecycle implements ContainerLifecycle {
   constructor(
     private readonly deployments: WorkerDeploymentStore,
@@ -143,6 +149,27 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
       if (!promoted) {
         await this.process("docker", ["rm", "--force", name], this.options(30_000)).catch(() => undefined);
       }
+    }
+  }
+
+  async remove(runtime: RuntimeRemoval): Promise<void> {
+    const routePath = join(this.config.caddyRoutesDir, `${runtime.slug}.caddy`);
+    await rm(routePath, { force: true });
+    await this.caddy("validate");
+    await this.caddy("reload");
+
+    await this.process(
+      "docker",
+      ["rm", "--force", runtime.containerId],
+      this.options(30_000),
+    ).catch(() => undefined);
+
+    if (runtime.imageName !== null) {
+      await this.process(
+        "docker",
+        ["image", "rm", "--force", runtime.imageName],
+        this.options(30_000),
+      ).catch(() => undefined);
     }
   }
 

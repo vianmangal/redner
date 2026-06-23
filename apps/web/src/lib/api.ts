@@ -74,10 +74,17 @@ export async function createProject(
   return response.project;
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  await request<void>(`/projects/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+export async function deleteProject(
+  id: string,
+): Promise<"deleted" | "deleting"> {
+  const response = await request<{ status: "deleting" } | undefined>(
+    `/projects/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return response?.status ?? "deleted";
 }
 
 export async function deployProject(id: string): Promise<Deployment> {

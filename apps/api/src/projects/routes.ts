@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { ProjectActionQueue } from "@redner/queue";
 import type { ZodError } from "zod";
 
 import { ApiError } from "../errors.js";
@@ -28,6 +29,7 @@ function parseProjectId(value: string): string {
 export async function registerProjectRoutes(
   app: FastifyInstance,
   projects: ProjectStore,
+  actions: ProjectActionQueue,
 ): Promise<void> {
   app.get("/projects", async () => ({ projects: await projects.list() }));
 
@@ -85,6 +87,20 @@ export async function registerProjectRoutes(
           "PROJECT_ACTIVE",
           "Stop active deployment work before deleting this project",
         );
+      }
+
+      if (result === "cleanup_required") {
+        try {
+          await actions.enqueue(id, "delete");
+        } catch {
+          throw new ApiError(
+            503,
+            "QUEUE_UNAVAILABLE",
+            "Project deletion could not be queued",
+          );
+        }
+
+        return reply.status(202).send({ status: "deleting" });
       }
 
       return reply.status(204).send();

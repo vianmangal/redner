@@ -21,3 +21,19 @@ test("bodyless DELETE requests omit the JSON content type", async (context) => {
 
   await deleteProject("project-1");
 });
+
+test("project deletion reports asynchronous cleanup", async (context) => {
+  const originalFetch = globalThis.fetch;
+
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ status: "deleting" }), {
+      status: 202,
+      headers: { "content-type": "application/json" },
+    });
+
+  assert.equal(await deleteProject("project-1"), "deleting");
+});

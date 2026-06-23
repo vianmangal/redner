@@ -248,6 +248,37 @@ test("project routes create, list, find, and delete projects", async (context) =
   assert.equal(deleted.statusCode, 204);
 });
 
+test("stopped deployed projects queue resource cleanup before deletion", async (context) => {
+  const calls: string[] = [];
+  const actions: ProjectActionQueue = {
+    enqueue: async (projectId, action) => calls.push(`${projectId}:${action}`),
+    close: async () => undefined,
+  };
+  const projects = projectStore({
+    deleteIfInactive: async () => "cleanup_required",
+  });
+  const app = buildApp({
+    dependencies: dependencies(
+      {},
+      projects,
+      deploymentStore(),
+      deploymentQueue(),
+      actions,
+    ),
+    logger: false,
+  });
+  context.after(() => app.close());
+
+  const response = await app.inject({
+    method: "DELETE",
+    url: "/projects/project-1",
+  });
+
+  assert.equal(response.statusCode, 202);
+  assert.deepEqual(response.json(), { status: "deleting" });
+  assert.deepEqual(calls, ["project-1:delete"]);
+});
+
 test("project validation returns field-level details", async (context) => {
   const app = buildApp({ dependencies: dependencies(), logger: false });
   context.after(() => app.close());

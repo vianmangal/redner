@@ -79,11 +79,14 @@ records resolve to the VPS and ports 80 and 443 are reachable.
 
 ## Update
 
+Use the checked-in update script so the root `.env` is exported before Next.js
+embeds its `NEXT_PUBLIC_*` values:
+
 ```bash
-git pull --ff-only
-npm ci
-npm run db:deploy
-npm run build
-sudo systemctl restart redner-api redner-web redner-worker
-docker compose up -d --wait
+cd /home/ubuntu/redner
+./deploy/update.sh
 ```
+
+The script pulls the latest commit, installs locked dependencies, deploys
+migrations, builds all workspaces, refreshes Docker services, restarts the API,
+web, and worker processes, and verifies their health.

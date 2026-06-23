@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { ProjectStatus } from "@redner/shared";
 
 import { ApiClientError, getProject, runProjectAction } from "@/lib/api";
 
@@ -13,7 +14,7 @@ export function RuntimeActions({
   hasActive,
 }: {
   id: string;
-  status: string;
+  status: ProjectStatus;
   hasActive: boolean;
 }) {
   const router = useRouter();
@@ -104,6 +105,22 @@ export function RuntimeActions({
         : action === "stop"
           ? "Stop"
           : "Restart";
+  const statusLabel = pendingAction === "stop"
+    ? "Stopping container..."
+    : pendingAction === "restart"
+      ? "Starting container..."
+      : requesting
+        ? "Sending request..."
+        : effectiveStatus === "stopped"
+          ? "Container stopped"
+          : effectiveStatus === "running"
+            ? "Container running"
+            : `Container ${effectiveStatus}`;
+  const statusDot = busy
+    ? "bg-amber-500"
+    : effectiveStatus === "running"
+      ? "bg-emerald-500"
+      : "bg-slate-500";
 
   return (
     <div className="flex flex-col items-end">
@@ -115,20 +132,11 @@ export function RuntimeActions({
       >
         {buttonLabel}
       </button>
-      <div aria-live="polite">
-        {completedAction !== null && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            {completedAction === "stop" ? "Stopped" : "Running"}
-          </p>
-        )}
-        {pendingAction !== null && (
-          <p className="mt-2 text-xs font-medium text-muted">
-            {pendingAction === "stop"
-              ? "Stopping container..."
-              : "Starting container..."}
-          </p>
-        )}
+      <div className="mt-2" aria-live="polite">
+        <p className="flex items-center justify-end gap-1.5 text-xs font-semibold text-slate-700">
+          <span className={`size-1.5 rounded-full ${statusDot}`} />
+          {statusLabel}
+        </p>
         {error !== null && <p className="mt-2 text-xs text-rose-700">{error}</p>}
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ApiClientError, deleteProject } from "@/lib/api";
+import { ApiClientError, deleteProject, getProject } from "@/lib/api";
 
 export function DeleteProjectButton({ id, name }: { id: string; name: string }) {
   const router = useRouter();
@@ -16,7 +16,17 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
     setError(null);
 
     try {
-      await deleteProject(id);
+      const result = await deleteProject(id);
+      if (result === "deleting") {
+        const deleted = await waitForDeletion(id);
+        if (!deleted) {
+          setError(
+            "Cleanup is taking longer than expected. Refresh to check its status.",
+          );
+          setDeleting(false);
+          return;
+        }
+      }
       router.push("/");
       router.refresh();
     } catch (caught) {
@@ -34,7 +44,9 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
       {confirming ? (
         <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 p-3 text-left shadow-lg backdrop-blur-xl">
           <p className="text-xs font-medium text-rose-800">
-            Delete {name}? This cannot be undone.
+            {deleting
+              ? `Removing ${name}'s container, route, and history...`
+              : `Delete ${name}? This cannot be undone.`}
           </p>
           <div className="mt-3 flex justify-end gap-2">
             <button
@@ -67,4 +79,17 @@ export function DeleteProjectButton({ id, name }: { id: string; name: string }) 
       {error !== null && <p className="mt-2 text-xs text-rose-700">{error}</p>}
     </div>
   );
+}
+
+async function waitForDeletion(id: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    try {
+      await getProject(id);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 404) return true;
+    }
+  }
+
+  return false;
 }

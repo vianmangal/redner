@@ -18,14 +18,26 @@ export function createProjectActionProcessor(
       where: { id: job.data.projectId },
       include: { activeDeployment: true },
     });
-    const active = project?.activeDeployment;
-    if (project === null || project === undefined || active?.containerId === null || active?.containerId === undefined) {
+    if (project === null) {
+      if (job.data.action === "delete") return;
+      throw new Error("Project does not exist");
+    }
+
+    const active = project.activeDeployment;
+    if (active?.containerId === null || active?.containerId === undefined) {
       throw new Error("Project has no active container");
     }
     const lock = await locks.acquire(project.id);
     if (lock === null) throw new Error("Project already has an active operation");
     try {
-      if (job.data.action === "stop") {
+      if (job.data.action === "delete") {
+        await containers.remove({
+          slug: project.slug,
+          containerId: active.containerId,
+          imageName: active.imageName,
+        });
+        await database.project.delete({ where: { id: project.id } });
+      } else if (job.data.action === "stop") {
         await process("docker", ["stop", active.containerId], options());
         await database.project.update({ where: { id: project.id }, data: { status: "stopped" } });
         await deployments.appendSystemLog(active.id, "Project container stopped");

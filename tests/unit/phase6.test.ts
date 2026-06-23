@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -158,6 +158,42 @@ test("old-container cleanup failure does not fail an already promoted deployment
     assert.ok(run?.includes("--cap-drop"));
     assert.ok(run?.includes("NET_BIND_SERVICE"));
     assert.match(warning, /Could not remove previous container/);
+  } finally {
+    await rm(routesDir, { recursive: true, force: true });
+  }
+});
+
+test("runtime removal deletes its route, container, and image", async () => {
+  const routesDir = await mkdtemp(join(tmpdir(), "redner-runtime-remove-"));
+  const routePath = join(routesDir, "app.caddy");
+  await writeFile(routePath, "http://app.localhost { respond 200 }\n");
+  const calls: string[][] = [];
+  const process: ProcessRunner = async (_command, args) => {
+    calls.push(args);
+    return { stdout: "" };
+  };
+  const lifecycle = new DockerContainerLifecycle(
+    store(),
+    config(routesDir),
+    process,
+  );
+
+  try {
+    await lifecycle.remove({
+      slug: "app",
+      containerId: "container-1",
+      imageName: "image:tag",
+    });
+
+    await assert.rejects(access(routePath));
+    assert.ok(calls.some((args) => args.includes("validate")));
+    assert.ok(calls.some((args) => args.includes("reload")));
+    assert.ok(
+      calls.some((args) => args.join(" ") === "rm --force container-1"),
+    );
+    assert.ok(
+      calls.some((args) => args.join(" ") === "image rm --force image:tag"),
+    );
   } finally {
     await rm(routesDir, { recursive: true, force: true });
   }

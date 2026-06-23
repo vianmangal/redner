@@ -37,7 +37,7 @@ export interface DeploymentCancellationSubscriber {
   close(): Promise<void>;
 }
 
-export type ProjectAction = "stop" | "restart";
+export type ProjectAction = "stop" | "restart" | "delete";
 export interface ProjectActionJobData {
   projectId: string;
   action: ProjectAction;

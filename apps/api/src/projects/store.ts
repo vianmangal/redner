@@ -5,7 +5,11 @@ import {
 } from "@redner/database";
 import type { CreateProjectInput, Project } from "@redner/shared";
 
-export type DeleteProjectResult = "deleted" | "not_found" | "conflict";
+export type DeleteProjectResult =
+  | "deleted"
+  | "cleanup_required"
+  | "not_found"
+  | "conflict";
 
 export interface ProjectStore {
   create(input: CreateProjectInput): Promise<Project>;
@@ -61,6 +65,7 @@ export class PrismaProjectStore implements ProjectStore {
       where: { id },
       select: {
         activeDeploymentId: true,
+        status: true,
         deployments: {
           where: {
             status: {
@@ -83,8 +88,12 @@ export class PrismaProjectStore implements ProjectStore {
       return "not_found";
     }
 
-    if (project.activeDeploymentId !== null || project.deployments.length > 0) {
+    if (project.deployments.length > 0) {
       return "conflict";
+    }
+
+    if (project.activeDeploymentId !== null) {
+      return project.status === "stopped" ? "cleanup_required" : "conflict";
     }
 
     try {

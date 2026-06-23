@@ -116,7 +116,11 @@ export function buildApp({
   });
 
   void app.register(async (projectApp) =>
-    registerProjectRoutes(projectApp, dependencies.projects),
+    registerProjectRoutes(
+      projectApp,
+      dependencies.projects,
+      dependencies.projectActionQueue,
+    ),
   );
   void app.register(async (deploymentApp) =>
     registerDeploymentRoutes(

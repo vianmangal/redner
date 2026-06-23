@@ -14,6 +14,7 @@ export {
   DockerContainerLifecycle,
   type ContainerConfig,
   type ContainerLifecycle,
+  type RuntimeRemoval,
 } from "./container-lifecycle.js";
 
 export { loadWorkerConfig } from "./config.js";

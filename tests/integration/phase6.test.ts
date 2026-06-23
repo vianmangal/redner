@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -48,6 +48,8 @@ test("healthy candidate is routed and promoted through Caddy", async () => {
 
     const stored = await database.project.findUniqueOrThrow({ where: { id: projectId }, include: { activeDeployment: true } });
     containerId = stored.activeDeployment?.containerId ?? undefined;
+    assert.ok(containerId);
+    assert.ok(imageName);
     assert.equal(stored.status, "running");
     assert.equal(stored.activeDeployment?.status, "succeeded");
     const response = await runProcess("curl", ["--fail", "--silent", "--header", `Host: ${slug}.localhost`, "http://127.0.0.1"], options());
@@ -63,6 +65,15 @@ test("healthy candidate is routed and promoted through Caddy", async () => {
     assert.equal((await database.project.findUniqueOrThrow({ where: { id: projectId } })).status, "stopped");
     await actions({ data: { projectId, action: "restart" } } as Job<ProjectActionJobData>);
     assert.equal((await database.project.findUniqueOrThrow({ where: { id: projectId } })).status, "running");
+    await actions({ data: { projectId, action: "stop" } } as Job<ProjectActionJobData>);
+    await actions({ data: { projectId, action: "delete" } } as Job<ProjectActionJobData>);
+    assert.equal(await database.project.findUnique({ where: { id: projectId } }), null);
+    await assert.rejects(access(routePath));
+    await assert.rejects(runProcess("docker", ["inspect", containerId], options()));
+    await assert.rejects(runProcess("docker", ["image", "inspect", imageName], options()));
+    projectId = undefined;
+    containerId = undefined;
+    imageName = undefined;
   } finally {
     if (containerId) await runProcess("docker", ["rm", "--force", containerId], options()).catch(() => undefined);
     if (imageName) await runProcess("docker", ["image", "rm", "--force", imageName], options()).catch(() => undefined);
