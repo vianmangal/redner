@@ -198,3 +198,41 @@ test("runtime removal deletes its route, container, and image", async () => {
     await rm(routesDir, { recursive: true, force: true });
   }
 });
+
+test("runtime removal tolerates an already missing container", async () => {
+  const routesDir = await mkdtemp(join(tmpdir(), "redner-runtime-remove-missing-"));
+  const routePath = join(routesDir, "app.caddy");
+  await writeFile(routePath, "http://app.localhost { respond 200 }\n");
+  const calls: string[][] = [];
+  const process: ProcessRunner = async (_command, args) => {
+    calls.push(args);
+    return { stdout: "" };
+  };
+  const lifecycle = new DockerContainerLifecycle(
+    store(),
+    config(routesDir),
+    process,
+  );
+
+  try {
+    await lifecycle.remove({
+      slug: "app",
+      containerId: null,
+      imageName: null,
+    });
+
+    await assert.rejects(access(routePath));
+    assert.ok(calls.some((args) => args.includes("validate")));
+    assert.ok(calls.some((args) => args.includes("reload")));
+    assert.equal(
+      calls.some((args) => args[0] === "rm" && args[1] === "--force"),
+      false,
+    );
+    assert.equal(
+      calls.some((args) => args.join(" ").startsWith("image rm")),
+      false,
+    );
+  } finally {
+    await rm(routesDir, { recursive: true, force: true });
+  }
+});

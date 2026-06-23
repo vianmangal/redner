@@ -31,7 +31,7 @@ export interface ContainerLifecycle {
 
 export interface RuntimeRemoval {
   slug: string;
-  containerId: string;
+  containerId: string | null;
   imageName: string | null;
 }
 
@@ -158,11 +158,13 @@ export class DockerContainerLifecycle implements ContainerLifecycle {
     await this.caddy("validate");
     await this.caddy("reload");
 
-    await this.process(
-      "docker",
-      ["rm", "--force", runtime.containerId],
-      this.options(30_000),
-    ).catch(() => undefined);
+    if (runtime.containerId !== null) {
+      await this.process(
+        "docker",
+        ["rm", "--force", runtime.containerId],
+        this.options(30_000),
+      ).catch(() => undefined);
+    }
 
     if (runtime.imageName !== null) {
       await this.process(

@@ -88,12 +88,12 @@ export class PrismaProjectStore implements ProjectStore {
       return "not_found";
     }
 
-    if (project.deployments.length > 0) {
-      return "conflict";
-    }
-
     if (project.activeDeploymentId !== null) {
       return project.status === "stopped" ? "cleanup_required" : "conflict";
+    }
+
+    if (project.deployments.length > 0) {
+      return "conflict";
     }
 
     try {

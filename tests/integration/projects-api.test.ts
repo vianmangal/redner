@@ -136,3 +136,60 @@ test("project deletion is blocked while cancellation cleanup is pending", async 
     await database.$disconnect();
   }
 });
+
+test("stopped deployed project deletion requests runtime cleanup", async () => {
+  const config = loadConfig({ NODE_ENV: "test" });
+  const dependencies = createDependencies(config);
+  const database = createDatabaseClient(config.DATABASE_URL);
+  let projectId: string | undefined;
+
+  try {
+    const project = await database.project.create({
+      data: {
+        name: "Stopped Project",
+        slug: `stopped-delete-${Date.now()}`,
+        repoUrl: "https://github.com/example/app.git",
+        branch: "main",
+        appPort: 3000,
+      },
+    });
+    projectId = project.id;
+    const activeDeployment = await database.deployment.create({
+      data: {
+        projectId,
+        status: "succeeded",
+        snapshotRepoUrl: project.repoUrl,
+        snapshotBranch: project.branch,
+        snapshotSlug: project.slug,
+        snapshotAppPort: project.appPort,
+        containerId: "stopped-container",
+        imageName: "redner-test:stopped",
+      },
+    });
+    await database.deployment.create({
+      data: {
+        projectId,
+        status: "cancelling",
+        snapshotRepoUrl: project.repoUrl,
+        snapshotBranch: project.branch,
+        snapshotSlug: project.slug,
+        snapshotAppPort: project.appPort,
+      },
+    });
+    await database.project.update({
+      where: { id: projectId },
+      data: { activeDeploymentId: activeDeployment.id, status: "stopped" },
+    });
+
+    assert.equal(
+      await dependencies.projects.deleteIfInactive(projectId),
+      "cleanup_required",
+    );
+  } finally {
+    if (projectId !== undefined) {
+      await database.project.deleteMany({ where: { id: projectId } });
+    }
+    await dependencies.close();
+    await database.$disconnect();
+  }
+});
