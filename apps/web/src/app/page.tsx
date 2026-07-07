@@ -39,7 +39,8 @@ export default async function ProjectsPage() {
             Your local services
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
-            RENDER CLONE BASICALLY - make sure ur project has a dockerfile
+            Create projects from trusted GitHub repositories, deploy Dockerfile
+            apps, and manage their containers through Caddy-routed subdomains.
           </p>
         </div>
         <Link

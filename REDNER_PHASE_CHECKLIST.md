@@ -198,34 +198,40 @@ verification before moving to the next one.
 - [x] Cleanup never removes active project resources
 
 
+## Optional Single-VPS Exercise
+
+This project is intentionally a single-operator learning tool. The local MVP is
+complete without this section; public deployments must keep the dashboard/API
+private or protected at the server level.
+
 ### Build
 
-- [ ] Provision a disposable or private single VPS
-- [ ] Point `*.apps.example.com` at the VPS
-- [ ] Configure Caddy on ports 80 and 443
-- [ ] Enable Caddy automatic HTTPS for public application hostnames
-- [ ] Generate application URLs under the selected base domain
+- [x] Provision a disposable or private single VPS
+- [x] Point `*.apps.example.com` at the VPS
+- [x] Configure Caddy on ports 80 and 443
+- [x] Enable Caddy automatic HTTPS for public application hostnames
+- [x] Generate application URLs under the selected base domain
 - [ ] Protect the redner dashboard with a VPN or server-level authentication
 - [ ] Confirm that only deployed application routes are public
 
 ### Done when
 
-- [ ] A deployed application is reachable over HTTPS
+- [x] A deployed application is reachable over HTTPS
 - [ ] The dashboard is not anonymously accessible from the internet
 - [ ] Certificate renewal and container restart behavior are verified
 
 ## Final MVP Check
 
-- [ ] Create a project from the dashboard
-- [ ] Queue a deployment without blocking the API
-- [ ] Clone and build the trusted test repository
-- [ ] View stored and live deployment logs
-- [ ] Health-check and promote the candidate container
-- [ ] Keep the old version running when replacement startup fails
-- [ ] Open the application at its stable local subdomain
-- [ ] Stop, restart, redeploy, and delete the project
-- [ ] Restart redner and recover correct state
-- [ ] Clean failed and inactive resources safely
+- [x] Create a project from the dashboard
+- [x] Queue a deployment without blocking the API
+- [x] Clone and build the trusted test repository
+- [x] View stored and live deployment logs
+- [x] Health-check and promote the candidate container
+- [x] Keep the old version running when replacement startup fails
+- [x] Open the application at its stable local subdomain
+- [x] Stop, restart, redeploy, and delete the project
+- [x] Restart redner and recover correct state
+- [x] Clean failed and inactive resources safely
 
 ## Deferred Features
 

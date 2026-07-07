@@ -15,14 +15,17 @@ logs, and exposes the application through a local subdomain.
 
 ## Project Status
 
-Phases 0 through 9 are complete: the npm workspace foundation, local
-infrastructure, Prisma data model, project API, Next.js dashboard, BullMQ queue,
-deployment worker, safe repository cloning, and Docker image builds are in place.
+The local learning MVP is complete. Phases 0 through 9 are implemented: the npm
+workspace foundation, local infrastructure, Prisma data model, project API,
+Next.js dashboard, BullMQ queue, deployment worker, safe repository cloning, and
+Docker image builds are in place.
 Candidate containers, health checks, Caddy promotion, stop, and restart are also
 implemented. Deployment logs are stored, streamed live with SSE, and displayed in
 the dashboard. Stable `.localhost` application routing is verified through Caddy.
 Active builds can be cancelled without taking the current version offline. Worker
 startup reconciliation restores runtime state and removes abandoned resources.
+Stopped projects can be deleted cleanly, including their Caddy route, Docker
+container, Docker image, and database history.
 
 - [Project plan](./REDNER_PROJECT_PLAN.md)
 - [Phase checklist](./REDNER_PHASE_CHECKLIST.md)
@@ -40,10 +43,12 @@ The learning MVP will support this flow:
 6. Start the new container and verify that it is healthy.
 7. Route a local subdomain to it through Caddy.
 8. Cancel an active build without stopping the running version.
-9. Stop, restart, or redeploy the application.
+9. Stop, restart, redeploy, or delete the application.
 
-The first target is one developer machine. Deploying redner to one private VPS
-with wildcard DNS and HTTPS is an optional final exercise.
+The first target is one developer machine. The repository also includes the
+single-VPS deployment files used for the public learning instance, but the
+dashboard still needs server-level protection before it should be exposed beyond
+a controlled environment.
 
 ## Architecture
 
